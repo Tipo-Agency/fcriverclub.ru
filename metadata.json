@@ -1,0 +1,7 @@
+{
+  "name": "River Club - Premium Fitness & SPA",
+  "description": "Premium multi-page fitness club website for River Club Khabarovsk, featuring online booking and interactive schedules.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
