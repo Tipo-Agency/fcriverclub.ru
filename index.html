@@ -1,0 +1,94 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>River Club | Premium Fitness</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              river: {
+                DEFAULT: '#0A4D4C', 
+                accent: '#BFA181',  
+                light: '#F8F9F8',   
+                dark: '#1A1A1A',    // Основной черный для текста
+                gray: '#666666'     // Серый для описаний
+              }
+            },
+            fontFamily: {
+              sans: ['Plus Jakarta Sans', 'sans-serif']
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      :root {
+        --river-primary: #0A4D4C;
+        --river-text-main: #1A1A1A;
+        --river-text-gray: #666666;
+        --river-bg: #FFFFFF;
+      }
+      
+      body {
+        background-color: var(--river-bg);
+        color: var(--river-text-main);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+
+      .glass-light {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(25px);
+        border: 1px solid rgba(0, 0, 0, 0.03);
+      }
+
+      .soft-shadow {
+        box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.05);
+      }
+
+      .rounded-premium { border-radius: 32px; }
+      .rounded-super { border-radius: 48px; }
+
+      .studio-outline {
+        color: transparent;
+        -webkit-text-stroke: 1px #ffffff;
+      }
+
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: #FFFFFF; }
+      ::-webkit-scrollbar-thumb { 
+        background: #E5E5E5; 
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover { background: var(--river-primary); }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.3",
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "react-dom": "https://esm.sh/react-dom@^19.2.3",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+        "framer-motion": "https://esm.sh/framer-motion@^12.23.26",
+        "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+        "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+        "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
+      }
+    }
+    </script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
