@@ -1,11 +1,51 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, ChevronRight } from 'lucide-react';
 import { useFeedback } from '../../contexts/FeedbackContext';
+import { sendLeadTo1C, type LeadData } from '../../services/leadService';
 
 export const FinalCTA: React.FC = () => {
   const { openModal } = useFeedback();
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!name.trim()) {
+      setError('Пожалуйста, укажите ваше имя');
+      return;
+    }
+    
+    if (!phone.trim()) {
+      setError('Пожалуйста, укажите номер телефона');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const leadData: LeadData = {
+      name: name.trim(),
+      phone: phone.trim(),
+      subject: 'Индивидуальная презентация клуба',
+    };
+
+    const result = await sendLeadTo1C(leadData);
+
+    setIsSubmitting(false);
+
+    if (result.success) {
+      alert('Спасибо! Заявка отправлена. Мы свяжемся с вами в ближайшее время.');
+      setName('');
+      setPhone('');
+    } else {
+      setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
+    }
+  };
   
   return (
     <section className="bg-river text-white overflow-hidden min-h-fit md:min-h-[600px] flex items-center">
@@ -30,13 +70,22 @@ export const FinalCTA: React.FC = () => {
             </div>
           </div>
 
-          <form className="flex flex-col gap-4 max-w-2xl">
+          <form className="flex flex-col gap-4 max-w-2xl" onSubmit={handleSubmit}>
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/50 text-white px-4 py-3 rounded-2xl text-sm font-medium">
+                {error}
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-5 focus-within:border-river-accent/50 transition-all">
                 <input 
                   type="text" 
                   placeholder="Ваше имя" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   className="bg-transparent w-full outline-none text-white placeholder:text-white/30 font-bold text-sm md:text-base"
+                  required
                 />
               </div>
               
@@ -52,13 +101,20 @@ export const FinalCTA: React.FC = () => {
                 <input 
                   type="tel" 
                   placeholder="(000) 000-00-00" 
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   className="bg-transparent w-full outline-none text-white placeholder:text-white/30 font-bold text-sm md:text-base"
+                  required
                 />
               </div>
             </div>
 
-            <button onClick={(e) => { e.preventDefault(); openModal("Индивидуальная презентация клуба"); }} className="bg-white text-river w-full h-16 md:h-20 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-river-accent hover:text-white transition-all duration-500 flex items-center justify-center gap-3 shadow-xl">
-              Записаться <ChevronRight size={18} />
+            <button 
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-white text-river w-full h-16 md:h-20 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-river-accent hover:text-white transition-all duration-500 flex items-center justify-center gap-3 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Отправка...' : 'Записаться'} <ChevronRight size={18} />
             </button>
           </form>
 

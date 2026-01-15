@@ -5,6 +5,88 @@ import { Play, Star, Gift, Crown, Waves, CakeSlice, PartyPopper, ChevronRight, B
 import { LuxuryButton } from '../components/ui/LuxuryButton';
 import { KIDS_DIRECTIONS } from '../constants';
 import { useFeedback } from '../contexts/FeedbackContext';
+import { sendLeadTo1C, type LeadData } from '../services/leadService';
+
+const LeadFormKids: React.FC = () => {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!name.trim()) {
+      setError('Пожалуйста, укажите имя');
+      return;
+    }
+    
+    if (!phone.trim()) {
+      setError('Пожалуйста, укажите номер телефона');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const leadData: LeadData = {
+      name: name.trim(),
+      phone: phone.trim(),
+      subject: 'River Kids: Запись на визит',
+    };
+
+    const result = await sendLeadTo1C(leadData);
+
+    setIsSubmitting(false);
+
+    if (result.success) {
+      alert('Спасибо! Заявка отправлена. Мы свяжемся с вами в ближайшее время.');
+      setName('');
+      setPhone('');
+    } else {
+      setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
+    }
+  };
+
+  return (
+    <form className="space-y-6" onSubmit={handleSubmit}>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm font-medium">
+          {error}
+        </div>
+      )}
+      <div className="space-y-2">
+        <label className="text-[10px] font-black text-river-dark/30 uppercase tracking-widest ml-1">Имя родителя</label>
+        <input 
+          type="text" 
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full bg-river-light border border-black/5 rounded-2xl px-6 py-5 text-river-dark font-bold focus:border-river-accent outline-none transition-all" 
+          placeholder="Александр"
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-[10px] font-black text-river-dark/30 uppercase tracking-widest ml-1">Телефон</label>
+        <input 
+          type="tel" 
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="w-full bg-river-light border border-black/5 rounded-2xl px-6 py-5 text-river-dark font-bold focus:border-river-accent outline-none transition-all" 
+          placeholder="+7 (999) 000-00-00"
+          required
+        />
+      </div>
+      <button 
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full h-20 bg-river text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-river-accent transition-all shadow-xl flex items-center justify-center gap-4 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isSubmitting ? 'Отправка...' : 'Отправить заявку'} <ArrowRight size={20} />
+      </button>
+    </form>
+  );
+};
 
 const QUICK_LINKS = [
   { id: 1, title: 'Водные программы', icon: <Waves /> },
@@ -300,19 +382,7 @@ const RiverKids: React.FC = () => {
                
                <h3 className="text-3xl font-black text-river-dark uppercase tracking-tighter mb-8 leading-none">ЗАПИСАТЬСЯ <br/> НА ВИЗИТ</h3>
                
-               <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-river-dark/30 uppercase tracking-widest ml-1">Имя родителя</label>
-                    <input type="text" className="w-full bg-river-light border border-black/5 rounded-2xl px-6 py-5 text-river-dark font-bold focus:border-river-accent outline-none transition-all" placeholder="Александр" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-river-dark/30 uppercase tracking-widest ml-1">Телефон</label>
-                    <input type="tel" className="w-full bg-river-light border border-black/5 rounded-2xl px-6 py-5 text-river-dark font-bold focus:border-river-accent outline-none transition-all" placeholder="+7 (999) 000-00-00" />
-                  </div>
-                  <button className="w-full h-20 bg-river text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-river-accent transition-all shadow-xl flex items-center justify-center gap-4">
-                    Отправить заявку <ArrowRight size={20} />
-                  </button>
-               </form>
+               <LeadFormKids />
                
                <p className="text-[9px] text-river-dark/40 font-bold uppercase tracking-widest mt-8 text-center leading-relaxed">
                   Нажимая кнопку, вы соглашаетесь с правилами <br/> обработки персональных данных.

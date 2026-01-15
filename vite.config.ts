@@ -8,6 +8,17 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          '/api/lead-proxy': {
+            target: 'https://cloud.1c.fitness/api/hs/lead/Webhook/570b6605-5cae-4211-b7b8-6422e15375df',
+            changeOrigin: true,
+            rewrite: (path) => '', // Убираем /api/lead-proxy из пути
+            secure: true,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        },
       },
       plugins: [react()],
       define: {

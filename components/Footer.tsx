@@ -15,11 +15,11 @@ export const Footer: React.FC = () => {
           {/* LOGO & DESCRIPTION */}
           <div className="space-y-6">
             <div className="flex flex-col gap-4">
-              <svg width="60" height="60" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
-                <path d="M50 5L10 28V72L50 95L90 72V28L50 5Z" stroke="currentColor" strokeWidth="2"/>
-                <path d="M50 5V95M10 28L90 72M10 72L90 28" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4"/>
-                <path d="M30 20V80M70 20V80" stroke="currentColor" strokeWidth="2"/>
-              </svg>
+              <img 
+                src="/logo.svg" 
+                alt="RIVER CLUB" 
+                className="h-10 md:h-12 filter brightness-0 invert"
+              />
               <div>
                 <h2 className="text-2xl font-extrabold tracking-tighter uppercase leading-none">RIVER CLUB</h2>
                 <p className="text-[10px] font-bold uppercase tracking-widest mt-2 text-white/60 leading-tight">
@@ -106,22 +106,17 @@ export const Footer: React.FC = () => {
           <div className="flex flex-col justify-end lg:items-end gap-6">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.4em] text-white/10">River Club 2026 © Excellence in Motion</p>
             
-            {/* DESIGNED BY DONT ASK STUDIO */}
+            {/* DESIGNED BY TIPA.UZ */}
             <a 
-              href="https://dontask.studio/" 
+              href="https://tipa.uz" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="flex items-center gap-2 group/credit"
             >
               <span className="text-[10px] font-black text-white/20 uppercase tracking-widest transition-colors group-hover/credit:text-white/40">DESIGNED BY</span>
               <div className="flex items-center gap-0.5 text-[11px] md:text-[13px] font-black italic uppercase transition-all group-hover/credit:tracking-[0.1em]">
-                <span className="text-white">DONT</span>
-                <span className="text-[#6768E8] ml-1">ASK</span>
-                <span className="ml-1 flex">
-                  <span className="studio-outline">STU</span>
-                  <span className="text-white">D</span>
-                  <span className="studio-outline">IO</span>
-                </span>
+                <span className="text-white">TIPA</span>
+                <span className="text-[#6768E8]">.UZ</span>
               </div>
             </a>
           </div>

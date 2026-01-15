@@ -9,6 +9,88 @@ import { LuxuryButton } from '../components/ui/LuxuryButton';
 import { BENEFITS, FITNESS_ZONES, NEWS } from '../constants';
 import * as LucideIcons from 'lucide-react';
 import { useFeedback } from '../contexts/FeedbackContext';
+import { sendLeadTo1C, type LeadData } from '../services/leadService';
+
+const LeadForm: React.FC<{ subject: string }> = ({ subject }) => {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!name.trim()) {
+      setError('Пожалуйста, укажите ваше имя');
+      return;
+    }
+    
+    if (!phone.trim()) {
+      setError('Пожалуйста, укажите номер телефона');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const leadData: LeadData = {
+      name: name.trim(),
+      phone: phone.trim(),
+      subject,
+    };
+
+    const result = await sendLeadTo1C(leadData);
+
+    setIsSubmitting(false);
+
+    if (result.success) {
+      alert('Спасибо! Заявка отправлена. Мы свяжемся с вами в ближайшее время.');
+      setName('');
+      setPhone('');
+    } else {
+      setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
+    }
+  };
+
+  return (
+    <form className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8" onSubmit={handleSubmit}>
+      {error && (
+        <div className="sm:col-span-2 bg-red-500/20 border border-red-500/50 text-white px-4 py-3 rounded-2xl text-sm font-medium">
+          {error}
+        </div>
+      )}
+      <div className="relative group">
+        <input 
+          type="text" 
+          placeholder="Ваше имя" 
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-5 md:py-6 focus:border-river-accent outline-none text-lg md:text-xl transition-all placeholder:text-white/20" 
+          required
+        />
+      </div>
+      <div className="relative group">
+        <input 
+          type="tel" 
+          placeholder="+7 (___) ___-__-__" 
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-5 md:py-6 focus:border-river-accent outline-none text-lg md:text-xl transition-all placeholder:text-white/20" 
+          required
+        />
+      </div>
+      <div className="sm:col-span-2 pt-4">
+        <LuxuryButton 
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-river-accent text-river-dark w-full sm:w-auto h-20 px-20 text-xl uppercase shadow-2xl hover:shadow-river-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? 'Отправка...' : 'Отправить'}
+        </LuxuryButton>
+      </div>
+    </form>
+  );
+};
 
 const Home: React.FC = () => {
   const { openModal } = useFeedback();
@@ -169,27 +251,7 @@ const Home: React.FC = () => {
             </h2>
             <p className="text-white/40 text-lg md:text-xl font-medium max-w-xl">Оставьте заявку и получите персональные условия перехода в River.</p>
             
-            <form className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8">
-              <div className="relative group">
-                <input 
-                  type="text" 
-                  placeholder="Ваше имя" 
-                  className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-5 md:py-6 focus:border-river-accent outline-none text-lg md:text-xl transition-all placeholder:text-white/20" 
-                />
-              </div>
-              <div className="relative group">
-                <input 
-                  type="tel" 
-                  placeholder="+7 (___) ___-__-__" 
-                  className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-5 md:py-6 focus:border-river-accent outline-none text-lg md:text-xl transition-all placeholder:text-white/20" 
-                />
-              </div>
-              <div className="sm:col-span-2 pt-4">
-                <LuxuryButton onClick={(e) => { e.preventDefault(); openModal("Переход из другого клуба"); }} className="bg-river-accent text-river-dark w-full sm:w-auto h-20 px-20 text-xl uppercase shadow-2xl hover:shadow-river-accent/20">
-                  Отправить
-                </LuxuryButton>
-              </div>
-            </form>
+            <LeadForm subject="Переход из другого клуба" />
           </div>
         </div>
       </section>

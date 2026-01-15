@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Deploy files (should be tracked in git)
+# .github/workflows/deploy.yml - MUST be tracked
+# api/lead-proxy.ts - MUST be tracked
+# server/proxy.js - MUST be tracked
+# scripts/push.sh - MUST be tracked

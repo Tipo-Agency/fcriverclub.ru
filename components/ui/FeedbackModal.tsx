@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Phone, User } from 'lucide-react';
+import { sendLeadTo1C, type LeadData } from '../../services/leadService';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -10,6 +11,47 @@ interface FeedbackModalProps {
 }
 
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, subject = "Заявка в клуб" }) => {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!name.trim()) {
+      setError('Пожалуйста, укажите ваше имя');
+      return;
+    }
+    
+    if (!phone.trim()) {
+      setError('Пожалуйста, укажите номер телефона');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const leadData: LeadData = {
+      name: name.trim(),
+      phone: phone.trim(),
+      subject,
+    };
+
+    const result = await sendLeadTo1C(leadData);
+
+    setIsSubmitting(false);
+
+    if (result.success) {
+      alert('Спасибо! Заявка отправлена. Мы свяжемся с вами в ближайшее время.');
+      setName('');
+      setPhone('');
+      onClose();
+    } else {
+      setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -26,6 +68,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, s
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            onClick={(e) => e.stopPropagation()}
             className="relative bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl"
           >
             <div className="bg-river-light p-8 md:p-12">
@@ -42,13 +85,22 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, s
                 <p className="text-river-gray text-sm font-medium">Мы свяжемся с вами в течение 15 минут для консультации.</p>
               </div>
 
-              <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); alert('Спасибо! Заявка отправлена.'); onClose(); }}>
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm font-medium">
+                    {error}
+                  </div>
+                )}
+                
                 <div className="relative">
                   <User className="absolute left-5 top-1/2 -translate-y-1/2 text-river/30" size={18} />
                   <input 
                     type="text" 
                     placeholder="Ваше имя" 
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     className="w-full bg-white border border-black/5 rounded-2xl py-5 pl-14 pr-6 focus:border-river outline-none transition-all font-bold text-river-dark"
+                    required
                   />
                 </div>
                 
@@ -57,12 +109,19 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, s
                   <input 
                     type="tel" 
                     placeholder="+7 (___) ___-__-__" 
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                     className="w-full bg-white border border-black/5 rounded-2xl py-5 pl-14 pr-6 focus:border-river outline-none transition-all font-bold text-river-dark"
+                    required
                   />
                 </div>
 
-                <button className="w-full bg-river text-white py-6 rounded-2xl font-extrabold uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:bg-river-dark transition-all shadow-xl mt-4">
-                  Отправить данные <Send size={16} />
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-river text-white py-6 rounded-2xl font-extrabold uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:bg-river-dark transition-all shadow-xl mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'Отправка...' : 'Отправить данные'} <Send size={16} />
                 </button>
               </form>
               
