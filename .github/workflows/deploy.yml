@@ -41,10 +41,22 @@ jobs:
           # Создаем директорию на сервере, если её нет
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "mkdir -p ${SERVER_PATH}"
           
-          # Копируем собранные файлы на сервер
+          # Полностью очищаем папку на сервере (удаляем все старые файлы и папки)
+          echo "Cleaning old files on server..."
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "
+            cd ${SERVER_PATH} && 
+            rm -rf * .[^.]* 2>/dev/null || true &&
+            find . -mindepth 1 -delete 2>/dev/null || true
+          "
+          
+          # Копируем все собранные файлы из dist на сервер
+          echo "Copying new files to server..."
           scp -o StrictHostKeyChecking=no -r dist/* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/
+          
+          # Если нужно скопировать скрытые файлы (например, .htaccess), раскомментируйте:
+          # scp -o StrictHostKeyChecking=no -r dist/.[^.]* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/ 2>/dev/null || true
           
           # Опционально: можно добавить команды для перезапуска сервиса
           # ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "cd ${SERVER_PATH} && pm2 restart app || true"
           
-          echo "Deployment completed successfully!"
+          echo "✅ Deployment completed successfully! All old files were removed and replaced."
