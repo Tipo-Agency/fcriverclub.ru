@@ -9,16 +9,20 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
         proxy: {
-          '/api/lead-proxy': {
+          '^/api/lead-proxy': {
             target: 'https://cloud.1c.fitness',
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api\/lead-proxy/, '/api/hs/lead/Webhook/570b6605-5cae-4211-b7b8-6422e15375df'),
             secure: true,
             configure: (proxy, _options) => {
               proxy.on('proxyReq', (proxyReq, req, _res) => {
-                if (req.method === 'POST') {
-                  proxyReq.setHeader('Content-Type', 'application/json');
-                }
+                console.log('[Vite Proxy] POST Request:', req.method, req.url, '->', proxyReq.path);
+              });
+              proxy.on('proxyRes', (proxyRes, req, _res) => {
+                console.log('[Vite Proxy] Response:', proxyRes.statusCode, req.method, req.url);
+                proxyRes.headers['access-control-allow-origin'] = '*';
+                proxyRes.headers['access-control-allow-methods'] = 'POST, OPTIONS, GET';
+                proxyRes.headers['access-control-allow-headers'] = 'Content-Type';
               });
             },
           },

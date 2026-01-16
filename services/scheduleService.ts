@@ -118,6 +118,7 @@ export const getScheduleFrom1C = async (
 ): Promise<ClassFrom1C[] | null> => {
   try {
     const url = `${SCHEDULE_API_ENDPOINT}?start_date=${startDate}&end_date=${endDate}`;
+    console.log('[ScheduleService] Запрос к API:', url);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -126,27 +127,77 @@ export const getScheduleFrom1C = async (
       },
     });
 
-    if (!response.ok) {
-      console.error('Failed to fetch schedule from 1C:', response.status, response.statusText);
+    console.log('[ScheduleService] Ответ API:', response.status, response.statusText, response.ok);
+    console.log('[ScheduleService] Content-Type:', response.headers.get('content-type'));
+
+    // Сначала читаем ответ как текст для отладки
+    const textResponse = await response.text().catch(() => 'Не удалось прочитать ответ');
+    
+    // Проверяем, что ответ действительно JSON
+    const contentType = response.headers.get('content-type');
+    if (!response.ok || !contentType || !contentType.includes('application/json')) {
+      console.error('[ScheduleService] API вернул ошибку или не JSON:', {
+        contentType,
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        responsePreview: textResponse.substring(0, 1000),
+      });
+      
+      // Если это HTML страница, возможно API недоступен или требует авторизацию
+      if (textResponse.includes('<!DOCTYPE') || textResponse.includes('<html')) {
+        console.error('[ScheduleService] API вернул HTML страницу вместо JSON. Возможно:');
+        console.error('  - Неправильный endpoint');
+        console.error('  - Требуется авторизация (API ключ)');
+        console.error('  - API недоступен');
+        console.error('  - Проблема с proxy конфигурацией');
+      } else if (response.status === 500) {
+        console.error('[ScheduleService] Ошибка 500 от сервера. Возможные причины:');
+        console.error('  - Ошибка на стороне 1C API');
+        console.error('  - Неправильные параметры запроса');
+        console.error('  - Требуется авторизация или API ключ');
+        console.error('Полный ответ:', textResponse);
+      }
+      
       return null;
     }
 
-    const data = await response.json();
+    // Парсим JSON из уже прочитанного текста
+    let data;
+    try {
+      data = JSON.parse(textResponse);
+    } catch (jsonError) {
+      console.error('[ScheduleService] Ошибка парсинга JSON:', jsonError);
+      console.error('[ScheduleService] Ответ (первые 500 символов):', textResponse.substring(0, 500));
+      return null;
+    }
+    
+    if (data === null) {
+      return null;
+    }
+    console.log('[ScheduleService] Полученные данные:', {
+      type: typeof data,
+      isArray: Array.isArray(data),
+      keys: data ? Object.keys(data) : null,
+      length: Array.isArray(data) ? data.length : (data?.classes ? data.classes.length : null),
+    });
     
     // Если ответ - массив, возвращаем его
     if (Array.isArray(data)) {
+      console.log('[ScheduleService] Возвращаем массив, занятий:', data.length);
       return data;
     }
     
     // Если ответ - объект с массивом classes
     if (data && Array.isArray(data.classes)) {
+      console.log('[ScheduleService] Возвращаем data.classes, занятий:', data.classes.length);
       return data.classes;
     }
     
-    console.warn('Unexpected response format from 1C API:', data);
+    console.warn('[ScheduleService] Неожиданный формат ответа от 1C API:', data);
     return null;
   } catch (error) {
-    console.error('Error fetching schedule from 1C:', error);
+    console.error('[ScheduleService] Исключение при запросе к 1C API:', error);
     return null;
   }
 };

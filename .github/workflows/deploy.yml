@@ -73,8 +73,8 @@ jobs:
               NGINX_CONF=\"/etc/nginx/sites-available/default\"
             fi
             
-            # Проверяем, есть ли уже конфигурация
-            if ! grep -q 'location /api/lead-proxy' \"\$NGINX_CONF\" 2>/dev/null && ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
+            # Всегда обновляем конфигурацию (на случай изменений)
+            if ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
               # Добавляем include перед закрывающей скобкой server блока
               # Используем awk для более надежной вставки
               sudo awk '/^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/ {
@@ -84,17 +84,18 @@ jobs:
                 }
                 print
               }' \"\$NGINX_CONF\" > \"\$NGINX_CONF.tmp\" && sudo mv \"\$NGINX_CONF.tmp\" \"\$NGINX_CONF\"
-              
-              # Проверяем конфигурацию nginx и перезагружаем
-              if sudo nginx -t 2>/dev/null; then
-                sudo systemctl reload nginx 2>/dev/null || sudo service nginx reload 2>/dev/null
-                echo '✅ Nginx configured and reloaded successfully'
-              else
-                echo '⚠️ Warning: nginx config test failed'
-                sudo nginx -t
-              fi
+              echo 'ℹ️  Добавлен include api-proxy.conf в конфигурацию nginx'
             else
-              echo 'ℹ️  Nginx config for /api/lead-proxy already exists'
+              echo 'ℹ️  Include api-proxy.conf уже присутствует в конфигурации'
+            fi
+            
+            # Всегда перезагружаем nginx после обновления конфигурации
+            if sudo nginx -t 2>/dev/null; then
+              sudo systemctl reload nginx 2>/dev/null || sudo service nginx reload 2>/dev/null
+              echo '✅ Nginx конфигурация обновлена и перезагружена'
+            else
+              echo '⚠️ Warning: nginx config test failed'
+              sudo nginx -t
             fi
           " || echo "⚠️  Warning: nginx configuration step failed, but deployment continues"
           

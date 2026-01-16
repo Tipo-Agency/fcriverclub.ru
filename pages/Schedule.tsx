@@ -1,53 +1,152 @@
 // Интеграция с 1C для расписания - можно удалить через: bash scripts/remove-1c-integration.sh
-import React, { useState, useEffect, useMemo } from 'react';
-import { MapPin, Users, ChevronRight, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { MapPin, Users, ChevronRight, Calendar, ChevronLeft } from 'lucide-react';
 import { SCHEDULE } from '../constants';
 import { motion } from 'framer-motion';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { getScheduleFrom1C, convert1CClassToScheduleItem } from '../services/scheduleService';
 
+/**
+ * Получает понедельник выбранной недели
+ */
+const getMondayOfWeek = (date: Date): Date => {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Понедельник как 1-й день недели
+  return new Date(d.setDate(diff));
+};
+
+/**
+ * Форматирует дату для отображения
+ */
+const formatWeekRange = (monday: Date): string => {
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  
+  const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 
+                  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  
+  const mondayStr = `${monday.getDate()} ${months[monday.getMonth()]}`;
+  const sundayStr = `${sunday.getDate()} ${months[sunday.getMonth()]}`;
+  
+  if (monday.getMonth() === sunday.getMonth()) {
+    return `${monday.getDate()}-${sundayStr}`;
+  }
+  return `${mondayStr} - ${sundayStr}`;
+};
+
 const Schedule: React.FC = () => {
   const [activeTab, setActiveTab] = useState('ПН');
+  const [selectedWeek, setSelectedWeek] = useState<Date>(getMondayOfWeek(new Date()));
   const [apiSchedule, setApiSchedule] = useState<Array<ReturnType<typeof convert1CClassToScheduleItem>> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
   const { openModal } = useFeedback();
   const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 
-  // Загрузка расписания из 1C API
+  // Вычисляем даты начала и конца недели
+  const weekDates = useMemo(() => {
+    const monday = new Date(selectedWeek);
+    monday.setHours(0, 0, 0, 0);
+    
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    
+    return {
+      start: monday.toISOString().split('T')[0], // yyyy-mm-dd
+      end: sunday.toISOString().split('T')[0], // yyyy-mm-dd
+    };
+  }, [selectedWeek]);
+
+  // Используем ref для отслеживания текущего запроса и предотвращения дублирования
+  const loadingRef = useRef(false);
+  const currentRequestRef = useRef<string | null>(null);
+
+  // Загрузка расписания из 1C API при изменении недели
   useEffect(() => {
+    // Создаем уникальный ключ для этого запроса
+    const requestKey = `${weekDates.start}-${weekDates.end}`;
+    
+    // Если уже идет загрузка для этого запроса, не запускаем повторно
+    if (loadingRef.current && currentRequestRef.current === requestKey) {
+      console.log('[Schedule] Загрузка уже идет для этого запроса, пропускаем');
+      return;
+    }
+
+    // Если уже был загружен этот запрос, не загружаем повторно
+    if (currentRequestRef.current === requestKey && !loadingRef.current) {
+      console.log('[Schedule] Данные уже загружены для этой недели, пропускаем');
+      return;
+    }
+
     const loadSchedule = async () => {
+      loadingRef.current = true;
+      currentRequestRef.current = requestKey;
       setLoading(true);
+      setApiError(null);
+      
       try {
-        // Получаем текущую дату и дату через неделю
-        const today = new Date();
-        const nextWeek = new Date(today);
-        nextWeek.setDate(today.getDate() + 7);
-
-        const startDate = today.toISOString().split('T')[0]; // yyyy-mm-dd
-        const endDate = nextWeek.toISOString().split('T')[0]; // yyyy-mm-dd
-
-        const classes = await getScheduleFrom1C(startDate, endDate);
+        console.log('[Schedule] Загрузка расписания из 1C API:', weekDates, 'Request key:', requestKey);
+        const classes = await getScheduleFrom1C(weekDates.start, weekDates.end);
+        
+        console.log('[Schedule] Получено из API:', classes ? `${classes.length} занятий` : 'null');
         
         if (classes && classes.length > 0) {
           const converted = classes
             .map(convert1CClassToScheduleItem)
             .filter(item => !item.canceled); // Фильтруем отмененные занятия
+          console.log('[Schedule] Преобразовано занятий:', converted.length);
           setApiSchedule(converted);
         } else {
           // Если API не вернул данные, используем fallback
+          console.warn('[Schedule] API не вернул данные, используем fallback на статичные данные');
           setApiSchedule(null);
+          setApiError('API не вернул данные');
         }
       } catch (error) {
-        console.error('Error loading schedule from 1C:', error);
+        console.error('[Schedule] Ошибка загрузки расписания из 1C:', error);
         // При ошибке используем fallback
         setApiSchedule(null);
+        setApiError(error instanceof Error ? error.message : 'Ошибка загрузки расписания');
       } finally {
         setLoading(false);
+        loadingRef.current = false;
+        // Не очищаем currentRequestRef здесь, чтобы помнить, что запрос завершен
       }
     };
 
     loadSchedule();
-  }, []);
+    
+    // Cleanup функция - отменяем запрос, если компонент размонтируется или зависимости изменятся
+    return () => {
+      // В случае размонтирования или изменения зависимостей, сбрасываем флаги
+      // Но не сбрасываем currentRequestRef, чтобы избежать повторных загрузок при HMR
+      loadingRef.current = false;
+    };
+  }, [weekDates.start, weekDates.end]);
+
+  // Навигация по неделям
+  const goToPreviousWeek = () => {
+    const prevWeek = new Date(selectedWeek);
+    prevWeek.setDate(selectedWeek.getDate() - 7);
+    setSelectedWeek(prevWeek);
+  };
+
+  const goToNextWeek = () => {
+    const nextWeek = new Date(selectedWeek);
+    nextWeek.setDate(selectedWeek.getDate() + 7);
+    setSelectedWeek(nextWeek);
+  };
+
+  const goToCurrentWeek = () => {
+    setSelectedWeek(getMondayOfWeek(new Date()));
+  };
+
+  const isCurrentWeek = useMemo(() => {
+    const currentMonday = getMondayOfWeek(new Date());
+    return currentMonday.getTime() === selectedWeek.getTime();
+  }, [selectedWeek]);
 
   // Фильтрация расписания по выбранному дню недели
   const filteredSchedule = useMemo(() => {
@@ -94,16 +193,52 @@ const Schedule: React.FC = () => {
              <h1 className="text-6xl md:text-8xl font-extrabold text-river-dark tracking-tighter">Групповые <br/> <span className="text-river">программы</span></h1>
           </div>
           
-          <div className="flex flex-wrap gap-2 bg-river-light p-2 rounded-full border border-black/5">
-            {days.map((day) => (
-              <button 
-                key={day}
-                onClick={() => setActiveTab(day)}
-                className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center font-bold text-sm rounded-full transition-all duration-300 ${activeTab === day ? 'bg-river text-white shadow-lg' : 'text-river-gray hover:text-river-dark hover:bg-white'}`}
+          {/* Навигация по неделям */}
+          <div className="flex flex-col items-end gap-4">
+            <div className="flex items-center gap-4 bg-river-light p-3 rounded-full border border-black/5">
+              <button
+                onClick={goToPreviousWeek}
+                className="p-2 hover:bg-river hover:text-white rounded-full transition-all"
+                aria-label="Предыдущая неделя"
               >
-                {day}
+                <ChevronLeft size={20} />
               </button>
-            ))}
+              
+              <div className="flex flex-col items-center min-w-[200px]">
+                <div className="text-sm font-bold text-river-dark">
+                  {formatWeekRange(selectedWeek)}
+                </div>
+                {!isCurrentWeek && (
+                  <button
+                    onClick={goToCurrentWeek}
+                    className="text-xs text-river hover:underline mt-1"
+                  >
+                    Текущая неделя
+                  </button>
+                )}
+              </div>
+              
+              <button
+                onClick={goToNextWeek}
+                className="p-2 hover:bg-river hover:text-white rounded-full transition-all"
+                aria-label="Следующая неделя"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+            
+            {/* Дни недели */}
+            <div className="flex flex-wrap gap-2 bg-river-light p-2 rounded-full border border-black/5">
+              {days.map((day) => (
+                <button 
+                  key={day}
+                  onClick={() => setActiveTab(day)}
+                  className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center font-bold text-sm rounded-full transition-all duration-300 ${activeTab === day ? 'bg-river text-white shadow-lg' : 'text-river-gray hover:text-river-dark hover:bg-white'}`}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -111,11 +246,18 @@ const Schedule: React.FC = () => {
           <div className="text-center py-20">
             <div className="text-river-gray text-lg">Загрузка расписания...</div>
           </div>
-        ) : filteredSchedule.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-river-gray text-lg">На выбранный день занятий не найдено</div>
-          </div>
         ) : (
+          <>
+            {apiError && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                ⚠️ Ошибка загрузки из 1C API: {apiError}. Используются статичные данные.
+              </div>
+            )}
+            {filteredSchedule.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="text-river-gray text-lg">На выбранный день занятий не найдено</div>
+              </div>
+            ) : (
           <div className="space-y-6">
             {filteredSchedule.map((item, idx) => (
               <motion.div 
@@ -151,6 +293,8 @@ const Schedule: React.FC = () => {
               </motion.div>
             ))}
           </div>
+            )}
+          </>
         )}
       </div>
     </div>
