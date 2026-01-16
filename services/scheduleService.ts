@@ -151,6 +151,7 @@ export const getScheduleFrom1C = async (
         console.error('  - Требуется авторизация (API ключ)');
         console.error('  - API недоступен');
         console.error('  - Проблема с proxy конфигурацией');
+        console.error('[ScheduleService] Полный HTML ответ (первые 2000 символов):', textResponse.substring(0, 2000));
       } else if (response.status === 500) {
         console.error('[ScheduleService] Ошибка 500 от сервера. Возможные причины:');
         console.error('  - Ошибка на стороне 1C API');

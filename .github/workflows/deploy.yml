@@ -73,7 +73,7 @@ jobs:
               NGINX_CONF=\"/etc/nginx/sites-available/default\"
             fi
             
-            # Всегда обновляем конфигурацию (на случай изменений)
+            # Проверяем и обновляем конфигурацию nginx
             if ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
               # Добавляем include перед закрывающей скобкой server блока
               # Используем awk для более надежной вставки
@@ -87,6 +87,11 @@ jobs:
               echo 'ℹ️  Добавлен include api-proxy.conf в конфигурацию nginx'
             else
               echo 'ℹ️  Include api-proxy.conf уже присутствует в конфигурации'
+            fi
+            
+            # Проверяем, нет ли конфликтующих location блоков для /api/lead-proxy
+            if grep -q 'location /api/lead-proxy' \"\$NGINX_CONF\" 2>/dev/null && ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
+              echo '⚠️  Warning: Найдены location /api/lead-proxy в основном конфиге, которые могут конфликтовать'
             fi
             
             # Проверяем, что конфигурация правильно применена
