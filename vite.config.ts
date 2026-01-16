@@ -22,6 +22,13 @@ export default defineConfig(({ mode }) => {
               });
             },
           },
+          // Интеграция с 1C для расписания - можно удалить через: bash scripts/remove-1c-integration.sh
+          '/api/schedule': {
+            target: 'http://opb.kb.ru:8081/FitnesRiver/hs/api/v3',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/api\/schedule/, '/classes'),
+            secure: false,
+          },
         },
       },
       plugins: [react()],
