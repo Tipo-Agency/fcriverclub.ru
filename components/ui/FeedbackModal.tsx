@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { X, Send, Phone, User } from 'lucide-react';
 import { sendLeadTo1C, type LeadData } from '../../services/leadService';
 
@@ -126,7 +127,18 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, s
               </form>
               
               <p className="text-[10px] text-river-gray/50 font-bold uppercase tracking-widest mt-8 text-center leading-relaxed px-6">
-                Нажимая кнопку, вы соглашаетесь с условиями <br/> обработки персональных данных.
+                Нажимая кнопку, вы соглашаетесь с{' '}
+                <Link 
+                  to="/privacy" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                  }}
+                  className="text-river hover:text-river-dark underline underline-offset-2 transition-colors"
+                >
+                  политикой конфиденциальности
+                </Link>
+                {' '}и условиями обработки персональных данных.
               </p>
             </div>
           </motion.div>

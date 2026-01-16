@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Instagram, Send, Phone, MessageCircle, Share2, Shield } from 'lucide-react';
 import { useFeedback } from '../contexts/FeedbackContext';
 
@@ -20,12 +21,9 @@ export const Footer: React.FC = () => {
                 alt="RIVER CLUB" 
                 className="h-10 md:h-12 filter brightness-0 invert"
               />
-              <div>
-                <h2 className="text-2xl font-extrabold tracking-tighter uppercase leading-none">RIVER CLUB</h2>
-                <p className="text-[10px] font-bold uppercase tracking-widest mt-2 text-white/60 leading-tight">
-                  ПРЕМИАЛЬНЫЙ ФИТНЕС-КЛУБ <br/> ДЛЯ САМЫХ ТРЕБОВАТЕЛЬНЫХ
-                </p>
-              </div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 leading-tight">
+                ПРЕМИАЛЬНЫЙ ФИТНЕС-КЛУБ <br/> ДЛЯ САМЫХ ТРЕБОВАТЕЛЬНЫХ
+              </p>
             </div>
           </div>
 
@@ -77,9 +75,17 @@ export const Footer: React.FC = () => {
               River Kids
             </button>
 
-            <a href="#" className="block text-[11px] font-medium text-white/40 hover:text-white transition-colors underline underline-offset-4">
-              Политика конфиденциальности
-            </a>
+            <div className="space-y-2">
+              <Link to="/privacy" className="block text-[11px] font-medium text-white/40 hover:text-white transition-colors underline underline-offset-4">
+                Политика конфиденциальности
+              </Link>
+              <Link to="/oferta" className="block text-[11px] font-medium text-white/40 hover:text-white transition-colors underline underline-offset-4">
+                Публичная оферта
+              </Link>
+              <Link to="/rules" className="block text-[11px] font-medium text-white/40 hover:text-white transition-colors underline underline-offset-4">
+                Правила посещения клуба
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -111,13 +117,14 @@ export const Footer: React.FC = () => {
               href="https://tipa.uz" 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="flex items-center gap-2 group/credit"
+              className="flex items-center gap-3 group/credit"
             >
               <span className="text-[10px] font-black text-white/20 uppercase tracking-widest transition-colors group-hover/credit:text-white/40">DESIGNED BY</span>
-              <div className="flex items-center gap-0.5 text-[11px] md:text-[13px] font-black italic uppercase transition-all group-hover/credit:tracking-[0.1em]">
-                <span className="text-white">TIPA</span>
-                <span className="text-[#6768E8]">.UZ</span>
-              </div>
+              <img 
+                src="/tipa-logo.svg" 
+                alt="TIPA.UZ" 
+                className="h-6 md:h-8 opacity-60 group-hover/credit:opacity-100 transition-opacity"
+              />
             </a>
           </div>
         </div>
