@@ -76,12 +76,14 @@ jobs:
             # Проверяем, есть ли уже конфигурация
             if ! grep -q 'location /api/lead-proxy' \"\$NGINX_CONF\" 2>/dev/null && ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
               # Добавляем include перед закрывающей скобкой server блока
-              sudo sed -i '/^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/{
-                /^[[:space:]]*}/{
-                  i\
-    include /etc/nginx/includes/api-proxy.conf;
+              # Используем awk для более надежной вставки
+              sudo awk '/^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/ {
+                if (/^[[:space:]]*}/ && !added) {
+                  print \"    include /etc/nginx/includes/api-proxy.conf;\"
+                  added=1
                 }
-              }' \"\$NGINX_CONF\"
+                print
+              }' \"\$NGINX_CONF\" > \"\$NGINX_CONF.tmp\" && sudo mv \"\$NGINX_CONF.tmp\" \"\$NGINX_CONF\"
               
               # Проверяем конфигурацию nginx и перезагружаем
               if sudo nginx -t 2>/dev/null; then
