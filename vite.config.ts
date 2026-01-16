@@ -10,12 +10,16 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
         proxy: {
           '/api/lead-proxy': {
-            target: 'https://cloud.1c.fitness/api/hs/lead/Webhook/570b6605-5cae-4211-b7b8-6422e15375df',
+            target: 'https://cloud.1c.fitness',
             changeOrigin: true,
-            rewrite: (path) => '', // Убираем /api/lead-proxy из пути
+            rewrite: (path) => path.replace(/^\/api\/lead-proxy/, '/api/hs/lead/Webhook/570b6605-5cae-4211-b7b8-6422e15375df'),
             secure: true,
-            headers: {
-              'Content-Type': 'application/json',
+            configure: (proxy, _options) => {
+              proxy.on('proxyReq', (proxyReq, req, _res) => {
+                if (req.method === 'POST') {
+                  proxyReq.setHeader('Content-Type', 'application/json');
+                }
+              });
             },
           },
         },
