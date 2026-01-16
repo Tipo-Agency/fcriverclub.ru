@@ -89,13 +89,19 @@ jobs:
               echo 'ℹ️  Include api-proxy.conf уже присутствует в конфигурации'
             fi
             
-            # Всегда перезагружаем nginx после обновления конфигурации
-            if sudo nginx -t 2>/dev/null; then
-              sudo systemctl reload nginx 2>/dev/null || sudo service nginx reload 2>/dev/null
+            # Проверяем, что конфигурация правильно применена
+            echo '🔍 Проверка nginx конфигурации:'
+            sudo nginx -t
+            
+            # Перезагружаем nginx, чтобы применить изменения
+            echo '🔄 Перезагрузка nginx...'
+            sudo systemctl reload nginx 2>/dev/null || sudo service nginx reload 2>/dev/null || sudo nginx -s reload
+            
+            # Проверяем, что nginx работает
+            if sudo systemctl is-active --quiet nginx || sudo service nginx status > /dev/null 2>&1; then
               echo '✅ Nginx конфигурация обновлена и перезагружена'
             else
-              echo '⚠️ Warning: nginx config test failed'
-              sudo nginx -t
+              echo '⚠️ Warning: nginx может быть не перезагружен'
             fi
           " || echo "⚠️  Warning: nginx configuration step failed, but deployment continues"
           
