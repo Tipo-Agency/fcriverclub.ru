@@ -49,6 +49,10 @@ jobs:
             find . -mindepth 1 -delete 2>/dev/null || true
           "
           
+          # Копируем конфигурацию nginx для API прокси
+          echo "Copying nginx API proxy config..."
+          scp -o StrictHostKeyChecking=no nginx-api-proxy.conf ${SERVER_USER}@${SERVER_HOST}:/tmp/nginx-api-proxy.conf
+          
           # Копируем все собранные файлы из dist на сервер
           echo "Copying new files to server..."
           scp -o StrictHostKeyChecking=no -r dist/* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/
@@ -56,34 +60,36 @@ jobs:
           # Если нужно скопировать скрытые файлы (например, .htaccess), раскомментируйте:
           # scp -o StrictHostKeyChecking=no -r dist/.[^.]* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/ 2>/dev/null || true
           
-          # Копируем конфигурацию nginx для API прокси
-          echo "Copying nginx API proxy config..."
-          scp -o StrictHostKeyChecking=no nginx-api-proxy.conf ${SERVER_USER}@${SERVER_HOST}:/tmp/nginx-api-proxy.conf
-          
           # Настраиваем nginx для проксирования /api/lead-proxy
           echo "Configuring nginx for API proxy..."
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "
-            # Ищем активный конфиг nginx (проверяем sites-enabled)
+            # Копируем конфигурацию в постоянное место
+            sudo mkdir -p /etc/nginx/includes
+            sudo cp /tmp/nginx-api-proxy.conf /etc/nginx/includes/api-proxy.conf
+            
+            # Ищем активный конфиг nginx
             NGINX_CONF=\$(ls /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1)
             if [ -z \"\$NGINX_CONF\" ]; then
               NGINX_CONF=\"/etc/nginx/sites-available/default\"
-              if [ -L /etc/nginx/sites-enabled/default ]; then
-                NGINX_CONF=\"/etc/nginx/sites-available/default\"
-              fi
             fi
             
-            # Проверяем, есть ли уже конфигурация для /api/lead-proxy
-            if ! grep -q 'location /api/lead-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
-              # Добавляем конфигурацию перед закрывающей скобкой server блока
-              cat /tmp/nginx-api-proxy.conf | sudo tee -a \"\$NGINX_CONF\" > /dev/null
+            # Проверяем, есть ли уже конфигурация
+            if ! grep -q 'location /api/lead-proxy' \"\$NGINX_CONF\" 2>/dev/null && ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
+              # Добавляем include перед закрывающей скобкой server блока
+              sudo sed -i '/^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/{
+                /^[[:space:]]*}/{
+                  i\
+    include /etc/nginx/includes/api-proxy.conf;
+                }
+              }' \"\$NGINX_CONF\"
               
               # Проверяем конфигурацию nginx и перезагружаем
               if sudo nginx -t 2>/dev/null; then
                 sudo systemctl reload nginx 2>/dev/null || sudo service nginx reload 2>/dev/null
                 echo '✅ Nginx configured and reloaded successfully'
               else
-                echo '⚠️ Warning: nginx config test failed, rolling back...'
-                sudo sed -i '/location \\/api\\/lead-proxy/,/^}$/d' \"\$NGINX_CONF\"
+                echo '⚠️ Warning: nginx config test failed'
+                sudo nginx -t
               fi
             else
               echo 'ℹ️  Nginx config for /api/lead-proxy already exists'

@@ -22,8 +22,8 @@ export const Footer: React.FC = () => {
                 className="h-10 md:h-12 filter brightness-0 invert"
               />
               <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 leading-tight">
-                ПРЕМИАЛЬНЫЙ ФИТНЕС-КЛУБ <br/> ДЛЯ САМЫХ ТРЕБОВАТЕЛЬНЫХ
-              </p>
+                  ПРЕМИАЛЬНЫЙ ФИТНЕС-КЛУБ <br/> ДЛЯ САМЫХ ТРЕБОВАТЕЛЬНЫХ
+                </p>
             </div>
           </div>
 
@@ -77,7 +77,7 @@ export const Footer: React.FC = () => {
 
             <div className="space-y-2">
               <Link to="/privacy" className="block text-[11px] font-medium text-white/40 hover:text-white transition-colors underline underline-offset-4">
-                Политика конфиденциальности
+              Политика конфиденциальности
               </Link>
               <Link to="/oferta" className="block text-[11px] font-medium text-white/40 hover:text-white transition-colors underline underline-offset-4">
                 Публичная оферта
