@@ -86,10 +86,53 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
       body: JSON.stringify(payload),
     });
     
+    // Проверяем статус ответа
+    const responseText = await response.text().catch(() => '');
+    
+    // Если ответ не OK, возвращаем ошибку
     if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      console.error('Failed to send lead:', errorText);
+      console.error('Failed to send lead:', {
+        status: response.status,
+        statusText: response.statusText,
+        response: responseText
+      });
       return { success: false, message: 'Ошибка отправки заявки. Попробуйте позже.' };
+    }
+    
+    // Пытаемся распарсить JSON ответ (может быть пустой или не JSON)
+    let result;
+    try {
+      result = responseText ? JSON.parse(responseText) : {};
+    } catch (e) {
+      // Если ответ не JSON, но статус OK - считаем успехом
+      result = {};
+    }
+    
+    // Если 1C вернул ошибку в JSON
+    if (result.error) {
+      console.error('1C returned error:', result.error);
+      return { success: false, message: 'Ошибка отправки заявки. Попробуйте позже.' };
+    }
+    
+    // Отправляем событие в Яндекс.Метрику
+    if (typeof window !== 'undefined' && (window as any).ym) {
+      try {
+        (window as any).ym(94603976, 'reachGoal', 'form_submit', {
+          formSubject: data.subject || 'Заявка',
+          phone: normalizedPhone.substring(0, 3) + '***' + normalizedPhone.slice(-2) // Частично скрытый телефон
+        });
+      } catch (e) {
+        console.warn('Failed to send Yandex Metrika event:', e);
+      }
+    }
+    
+    // Отправляем событие в Calltouch
+    if (typeof window !== 'undefined' && (window as any).ct) {
+      try {
+        (window as any).ct('event', 'form_submit');
+      } catch (e) {
+        console.warn('Failed to send Calltouch event:', e);
+      }
     }
     
     return { success: true };

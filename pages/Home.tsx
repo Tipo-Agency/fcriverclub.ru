@@ -174,7 +174,7 @@ const Home: React.FC = () => {
         <div className="max-w-[1440px] mx-auto px-6 grid lg:grid-cols-2 gap-20 items-center">
           <div className="relative aspect-video lg:aspect-square rounded-super overflow-hidden shadow-2xl order-2 lg:order-1">
             <img 
-              src="/slide-06.jpg" 
+              src="/60d.jpg" 
               className="w-full h-full object-cover" 
               alt="Promo" 
             />
