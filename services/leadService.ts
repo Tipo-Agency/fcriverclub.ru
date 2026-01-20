@@ -93,6 +93,8 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
     // Проверяем статус ответа
     const responseText = await response.text().catch(() => '');
     
+    console.log('[LeadService] Полный ответ от 1C:', responseText);
+    
     // Если ответ не OK, возвращаем ошибку
     if (!response.ok) {
       console.error('Failed to send lead:', {
@@ -107,8 +109,10 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
     let result;
     try {
       result = responseText ? JSON.parse(responseText) : {};
+      console.log('[LeadService] Распарсенный ответ от 1C:', result);
     } catch (e) {
       // Если ответ не JSON, но статус OK - считаем успехом
+      console.log('[LeadService] Ответ не JSON, но статус OK. Текст ответа:', responseText);
       result = {};
     }
     
@@ -116,6 +120,12 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
     if (result.error) {
       console.error('1C returned error:', result.error);
       return { success: false, message: 'Ошибка отправки заявки. Попробуйте позже.' };
+    }
+    
+    // Проверяем есть ли в ответе информация об успехе или ошибке
+    if (result.success === false || result.status === 'error') {
+      console.error('1C returned error in response:', result);
+      return { success: false, message: result.message || 'Ошибка отправки заявки. Попробуйте позже.' };
     }
     
     // Отправляем событие в Яндекс.Метрику
