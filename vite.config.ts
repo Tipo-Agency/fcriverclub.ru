@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
           '^/api/lead-proxy': {
             target: 'https://cloud.1c.fitness',
             changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/api\/lead-proxy/, '/api/hs/lead/Webhook/570b6605-5cae-4211-b7b8-6422e15375df'),
+            rewrite: (path) => path.replace(/^\/api\/lead-proxy/, '/api/hs/lead/Webhook/9a93d939-e1e3-49b9-be61-0439957207f4'),
             secure: true,
             configure: (proxy, _options) => {
               proxy.on('proxyReq', (proxyReq, req, _res) => {
