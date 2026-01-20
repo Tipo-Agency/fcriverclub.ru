@@ -10,6 +10,7 @@ import { BENEFITS, FITNESS_ZONES, NEWS } from '../constants';
 import * as LucideIcons from 'lucide-react';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { sendLeadTo1C, type LeadData } from '../services/leadService';
+import { handlePhoneChange } from '../utils/phoneMask';
 
 const LeadForm: React.FC<{ subject: string }> = ({ subject }) => {
   const [name, setName] = useState('');
@@ -74,7 +75,7 @@ const LeadForm: React.FC<{ subject: string }> = ({ subject }) => {
           type="tel" 
           placeholder="+7 (___) ___-__-__" 
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => handlePhoneChange(e, setPhone)}
           className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl px-6 py-5 md:py-6 focus:border-river-accent outline-none text-lg md:text-xl transition-all placeholder:text-white/20" 
           required
         />

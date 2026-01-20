@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { AlertCircle, ChevronRight } from 'lucide-react';
 import { useFeedback } from '../../contexts/FeedbackContext';
 import { sendLeadTo1C, type LeadData } from '../../services/leadService';
+import { handlePhoneChange } from '../../utils/phoneMask';
 
 export const FinalCTA: React.FC = () => {
   const { openModal } = useFeedback();
@@ -102,7 +103,7 @@ export const FinalCTA: React.FC = () => {
                   type="tel" 
                   placeholder="(000) 000-00-00" 
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => handlePhoneChange(e, setPhone)}
                   className="bg-transparent w-full outline-none text-white placeholder:text-white/30 font-bold text-sm md:text-base"
                   required
                 />

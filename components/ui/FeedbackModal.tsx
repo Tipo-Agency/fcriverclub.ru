@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { X, Send, Phone, User } from 'lucide-react';
 import { sendLeadTo1C, type LeadData } from '../../services/leadService';
+import { handlePhoneChange } from '../../utils/phoneMask';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -111,7 +112,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, s
                     type="tel" 
                     placeholder="+7 (___) ___-__-__" 
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => handlePhoneChange(e, setPhone)}
                     className="w-full bg-white border border-black/5 rounded-2xl py-5 pl-14 pr-6 focus:border-river outline-none transition-all font-bold text-river-dark"
                     required
                   />

@@ -6,6 +6,7 @@ import { LuxuryButton } from '../components/ui/LuxuryButton';
 import { KIDS_DIRECTIONS } from '../constants';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { sendLeadTo1C, type LeadData } from '../services/leadService';
+import { handlePhoneChange } from '../utils/phoneMask';
 
 const LeadFormKids: React.FC = () => {
   const [name, setName] = useState('');
@@ -71,7 +72,7 @@ const LeadFormKids: React.FC = () => {
         <input 
           type="tel" 
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => handlePhoneChange(e, setPhone)}
           className="w-full bg-river-light border border-black/5 rounded-2xl px-6 py-5 text-river-dark font-bold focus:border-river-accent outline-none transition-all" 
           placeholder="+7 (999) 000-00-00"
           required
