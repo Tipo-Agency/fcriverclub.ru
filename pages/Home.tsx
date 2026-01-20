@@ -17,6 +17,7 @@ const LeadForm: React.FC<{ subject: string }> = ({ subject }) => {
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,9 +46,10 @@ const LeadForm: React.FC<{ subject: string }> = ({ subject }) => {
     setIsSubmitting(false);
 
     if (result.success) {
-      alert('Спасибо! Заявка отправлена. Мы свяжемся с вами в ближайшее время.');
+      setSuccess(true);
       setName('');
       setPhone('');
+      setTimeout(() => setSuccess(false), 5000);
     } else {
       setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
     }
@@ -55,6 +57,11 @@ const LeadForm: React.FC<{ subject: string }> = ({ subject }) => {
 
   return (
     <form className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8" onSubmit={handleSubmit}>
+      {success && (
+        <div className="sm:col-span-2 bg-green-500/20 border border-green-500/50 text-white px-4 py-3 rounded-2xl text-sm font-medium text-center">
+          ✓ Спасибо! Заявка отправлена. Мы свяжемся с вами в ближайшее время.
+        </div>
+      )}
       {error && (
         <div className="sm:col-span-2 bg-red-500/20 border border-red-500/50 text-white px-4 py-3 rounded-2xl text-sm font-medium">
           {error}

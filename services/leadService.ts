@@ -77,6 +77,8 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
       ...analytics,
     };
     
+    console.log('[LeadService] Отправка заявки в 1C:', payload);
+    
     // Отправляем через прокси
     const response = await fetch(PROXY_ENDPOINT, {
       method: 'POST',
@@ -85,6 +87,8 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
       },
       body: JSON.stringify(payload),
     });
+    
+    console.log('[LeadService] Ответ сервера:', response.status, response.statusText);
     
     // Проверяем статус ответа
     const responseText = await response.text().catch(() => '');
