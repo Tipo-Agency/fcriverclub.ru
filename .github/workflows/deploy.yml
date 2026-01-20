@@ -57,6 +57,10 @@ jobs:
           echo "Copying new files to server..."
           scp -o StrictHostKeyChecking=no -r dist/* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/
           
+          # Копируем PHP прокси файл на сервер
+          echo "Copying PHP proxy file..."
+          scp -o StrictHostKeyChecking=no api/lead-proxy.php ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/api/lead-proxy.php
+          
           # Если нужно скопировать скрытые файлы (например, .htaccess), раскомментируйте:
           # scp -o StrictHostKeyChecking=no -r dist/.[^.]* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/ 2>/dev/null || true
           
