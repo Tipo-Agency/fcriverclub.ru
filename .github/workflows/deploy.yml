@@ -89,9 +89,16 @@ jobs:
               echo 'ℹ️  Include api-proxy.conf уже присутствует в конфигурации'
             fi
             
-            # Проверяем, нет ли конфликтующих location блоков для /api/lead-proxy
+            # Удаляем конфликтующие location блоки для /api/lead-proxy из основного конфига
             if grep -q 'location /api/lead-proxy' \"\$NGINX_CONF\" 2>/dev/null && ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
-              echo '⚠️  Warning: Найдены location /api/lead-proxy в основном конфиге, которые могут конфликтовать'
+              echo '⚠️  Найдены location /api/lead-proxy в основном конфиге, удаляем их...'
+              sudo sed -i '/location \/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\"
+              echo '✅ Конфликтующие location блоки удалены'
+            fi
+            
+            # Проверяем еще раз после удаления
+            if grep -q 'location /api/lead-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
+              echo '⚠️  Warning: Все еще есть location /api/lead-proxy в основном конфиге!'
             fi
             
             # Проверяем, что конфигурация правильно применена
