@@ -370,7 +370,7 @@ const RiverKids: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                      <span className="text-river-accent font-black text-[10px] uppercase tracking-widest">Телефон</span>
-                     <p className="text-white font-bold">+7 (4212) 90-30-81</p>
+                     <p className="text-white font-bold">+7 (421) 272-82-92</p>
                   </div>
                </div>
             </div>

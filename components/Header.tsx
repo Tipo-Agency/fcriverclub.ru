@@ -94,7 +94,7 @@ export const Header: React.FC = () => {
             </div>
 
             <div className="mt-auto pt-12 border-t border-black/5">
-               <p className="text-river-gray text-sm font-bold uppercase tracking-widest mb-4">+7 4212 90 30 81</p>
+               <p className="text-river-gray text-sm font-bold uppercase tracking-widest mb-4">+7 421 272 82 92</p>
                <p className="text-river-dark/40 text-[10px] font-bold uppercase tracking-widest">Хабаровск, ул. Советская, 1 к4</p>
             </div>
           </motion.div>

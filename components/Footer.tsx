@@ -32,7 +32,7 @@ export const Footer: React.FC = () => {
             <div className="space-y-8">
               <div className="space-y-2">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-white/40">НАШ ТЕЛЕФОН:</h4>
-                <a href="tel:+74212903081" className="text-xl font-extrabold hover:text-river-accent transition-colors">+7 (421) 290-30-81</a>
+                <a href="tel:+74212728292" className="text-xl font-extrabold hover:text-river-accent transition-colors">+7 (421) 272-82-92</a>
               </div>
               <div className="space-y-2">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-white/40">НАШ АДРЕС:</h4>
