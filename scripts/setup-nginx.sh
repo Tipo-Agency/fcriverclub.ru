@@ -26,7 +26,7 @@ PROXY_CONFIG=$(cat <<'EOF'
             return 204;
         }
         
-        proxy_pass https://cloud.1c.fitness/api/hs/lead/Webhook/570b6605-5cae-4211-b7b8-6422e15375df;
+        proxy_pass https://cloud.1c.fitness/api/hs/lead/Webhook/9a93d939-e1e3-49b9-be61-0439957207f4;
         proxy_set_header Host cloud.1c.fitness;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

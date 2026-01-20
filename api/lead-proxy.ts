@@ -3,7 +3,7 @@
  * Используется в production для обхода CORS
  */
 
-const WEBHOOK_URL = 'https://cloud.1c.fitness/api/hs/lead/Webhook/570b6605-5cae-4211-b7b8-6422e15375df';
+const WEBHOOK_URL = 'https://cloud.1c.fitness/api/hs/lead/Webhook/9a93d939-e1e3-49b9-be61-0439957207f4';
 
 // Для Vercel / Netlify Functions
 export async function POST(request: Request) {
