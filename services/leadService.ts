@@ -174,12 +174,23 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
     
     // Отправка в Calltouch API через отдельный endpoint
     try {
+      // Формируем payload для Calltouch с дополнительными полями
+      const calltouchPayload = {
+        ...payload,
+        subject: data.subject || 'Заявка с сайта fcriverclub.ru',
+        requestUrl: typeof window !== 'undefined' ? window.location.href : '',
+        // Получаем sessionId из Calltouch скрипта, если доступен
+        sessionId: typeof window !== 'undefined' && (window as any).ct 
+          ? (window as any).ct('calltracking_params', 'r2kmsp7t')?.sessionId 
+          : undefined,
+      };
+      
       const calltouchResponse = await fetch('/api/calltouch-proxy', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(calltouchPayload),
       });
       
       const calltouchResult = await calltouchResponse.json().catch(() => ({}));
