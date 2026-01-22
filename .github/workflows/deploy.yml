@@ -149,12 +149,13 @@ jobs:
             # Удаляем старый location блок если есть
             sudo sed -i '/location[[:space:]]*=[[:space:]]*\/api\/calltouch-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
             
-            # Формируем location блок для calltouch-proxy
-            CALLTOUCH_LOCATION_BLOCK=\"    location = /api/calltouch-proxy {
+            # Создаем временный файл с location блоком
+            sudo tee /tmp/calltouch-location.conf > /dev/null << 'NGINX_EOF'
+    location = /api/calltouch-proxy {
         limit_except POST OPTIONS {
             deny all;
         }
-        if (\\\$request_method = OPTIONS) {
+        if ($request_method = OPTIONS) {
             add_header 'Access-Control-Allow-Origin' '*' always;
             add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS' always;
             add_header 'Access-Control-Allow-Headers' 'Content-Type' always;
@@ -163,14 +164,14 @@ jobs:
             add_header 'Content-Type' 'text/plain';
             return 204;
         }
-        root \$DOCUMENT_ROOT;
-        fastcgi_pass \$PHP_SOCKET;
+        root DOCUMENT_ROOT_PLACEHOLDER;
+        fastcgi_pass PHP_SOCKET_PLACEHOLDER;
         fastcgi_index calltouch-proxy.php;
-        fastcgi_param SCRIPT_FILENAME \\\$document_root/api/calltouch-proxy.php;
+        fastcgi_param SCRIPT_FILENAME $document_root/api/calltouch-proxy.php;
         include fastcgi_params;
-        fastcgi_param REQUEST_METHOD \\\$request_method;
-        fastcgi_param CONTENT_TYPE \\\$content_type;
-        fastcgi_param CONTENT_LENGTH \\\$content_length;
+        fastcgi_param REQUEST_METHOD $request_method;
+        fastcgi_param CONTENT_TYPE $content_type;
+        fastcgi_param CONTENT_LENGTH $content_length;
         fastcgi_read_timeout 30;
         fastcgi_buffering off;
         fastcgi_request_buffering off;
@@ -178,27 +179,22 @@ jobs:
         add_header 'Access-Control-Allow-Origin' '*' always;
         add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS' always;
         add_header 'Access-Control-Allow-Headers' 'Content-Type' always;
-    }\"
+    }
+NGINX_EOF
+            
+            # Заменяем плейсхолдеры в файле
+            sudo sed -i \"s|DOCUMENT_ROOT_PLACEHOLDER|\$DOCUMENT_ROOT|g; s|PHP_SOCKET_PLACEHOLDER|\$PHP_SOCKET|g\" /tmp/calltouch-location.conf
             
             # Вставляем ПЕРЕД location / если он есть, иначе перед закрывающей скобкой server
             if grep -q 'location[[:space:]]*/' \"\$NGINX_CONF\" 2>/dev/null; then
               # Вставляем ПЕРЕД location /
-              echo \"\$CALLTOUCH_LOCATION_BLOCK\" | sudo sed -i '/location[[:space:]]*\//r /dev/stdin' \"\$NGINX_CONF\"
+              sudo sed -i '/location[[:space:]]*\//r /tmp/calltouch-location.conf' \"\$NGINX_CONF\"
               echo '✅ Location блок добавлен ПЕРЕД location /'
             else
               # Вставляем перед закрывающей скобкой server блока
-              sudo awk -v block=\"\$CALLTOUCH_LOCATION_BLOCK\" '/^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/ {
-                if (/^[[:space:]]*}/ && !added) {
-                  print block
-                  added=1
-                }
-                print
-              }' \"\$NGINX_CONF\" > \"\$NGINX_CONF.tmp\" && sudo mv \"\$NGINX_CONF.tmp\" \"\$NGINX_CONF\"
+              sudo awk 'FNR==NR{block=block\$0\"\\n\";next} /^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/ {if (/^[[:space:]]*}/ && !added) {printf \"%s\", block; added=1} print}' /tmp/calltouch-location.conf \"\$NGINX_CONF\" > \"\$NGINX_CONF.tmp\" && sudo mv \"\$NGINX_CONF.tmp\" \"\$NGINX_CONF\"
               echo '✅ Location блок добавлен перед закрывающей скобкой server'
             fi
-            
-            # Заменяем плейсхолдеры в только что добавленном блоке
-            sudo sed -i \"s|\\\$DOCUMENT_ROOT|\$DOCUMENT_ROOT|g; s|\\\$PHP_SOCKET|\$PHP_SOCKET|g\" \"\$NGINX_CONF\"
             
             # Проверяем что блок добавился
             if sudo grep -q 'location.*calltouch-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
