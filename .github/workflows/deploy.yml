@@ -208,12 +208,35 @@ jobs:
               exit 1
             fi
             
-            # Проверяем что файл calltouch-proxy.php существует
+            # Проверяем что файл calltouch-proxy.php существует и доступен
             if [ -f \"\$DOCUMENT_ROOT/api/calltouch-proxy.php\" ]; then
               echo '✅ Файл calltouch-proxy.php существует'
               ls -la \"\$DOCUMENT_ROOT/api/calltouch-proxy.php\"
+              # Проверяем права доступа
+              sudo chmod 644 \"\$DOCUMENT_ROOT/api/calltouch-proxy.php\"
+              # Проверяем что PHP может его прочитать
+              if php -l \"\$DOCUMENT_ROOT/api/calltouch-proxy.php\" > /dev/null 2>&1; then
+                echo '✅ PHP синтаксис файла корректен'
+              else
+                echo '⚠️  Warning: PHP синтаксис файла может быть некорректен'
+                php -l \"\$DOCUMENT_ROOT/api/calltouch-proxy.php\"
+              fi
             else
               echo '❌ ОШИБКА: Файл calltouch-proxy.php НЕ найден!'
+              echo '📁 Проверяем содержимое директории api:'
+              ls -la \"\$DOCUMENT_ROOT/api/\" || echo 'Директория api не существует!'
+              exit 1
+            fi
+            
+            # ФИНАЛЬНАЯ ПРОВЕРКА: тестируем что Nginx видит location блок
+            echo '🔍 ФИНАЛЬНАЯ ПРОВЕРКА конфигурации Nginx:'
+            if sudo nginx -T 2>/dev/null | grep -A 5 'location.*calltouch-proxy' > /dev/null; then
+              echo '✅ Nginx видит location блок для calltouch-proxy'
+              sudo nginx -T 2>/dev/null | grep -A 5 'location.*calltouch-proxy'
+            else
+              echo '❌ ОШИБКА: Nginx НЕ видит location блок для calltouch-proxy!'
+              echo 'Проверяем все location блоки:'
+              sudo nginx -T 2>/dev/null | grep 'location' | head -20
               exit 1
             fi
           " || echo "⚠️  Warning: nginx configuration step failed, but deployment continues"
