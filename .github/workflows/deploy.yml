@@ -143,12 +143,20 @@ jobs:
               NGINX_CONF=\"/etc/nginx/sites-available/default\"
             fi
             
-            # КРИТИЧНО: Добавляем location блок для calltouch-proxy НАПРЯМУЮ в конфиг
-            # Это гарантирует что он точно будет работать
-            echo '📝 Добавляем location блок для calltouch-proxy НАПРЯМУЮ в конфиг...'
-            
-            # Удаляем старый location блок если есть
+            # КРИТИЧНО: Сначала удаляем ВСЕ старые location блоки, потом добавляем новый
+            echo '🔍 Поиск и удаление ВСЕХ старых location блоков для /api/...'
+            # Удаляем location = /api/lead-proxy
+            sudo sed -i '/location[[:space:]]*=[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
+            # Удаляем location /api/lead-proxy
+            sudo sed -i '/location[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
+            # Удаляем location = /api/calltouch-proxy (ВСЕ варианты)
             sudo sed -i '/location[[:space:]]*=[[:space:]]*\/api\/calltouch-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
+            # Удаляем location /api/calltouch-proxy
+            sudo sed -i '/location[[:space:]]*\/api\/calltouch-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
+            echo '✅ Все старые location блоки удалены'
+            
+            # Теперь добавляем location блок для calltouch-proxy НАПРЯМУЮ в конфиг
+            echo '📝 Добавляем location блок для calltouch-proxy НАПРЯМУЮ в конфиг...'
             
             # Копируем готовый файл конфигурации и заменяем плейсхолдеры
             sudo cp /tmp/nginx-calltouch-location.conf /tmp/calltouch-location.conf
@@ -172,21 +180,6 @@ jobs:
               echo '❌ ОШИБКА: Location блок НЕ найден в конфиге!'
               exit 1
             fi
-            
-            # Удаляем ВСЕ конфликтующие location блоки для /api/lead-proxy и /api/calltouch-proxy из основного конфига
-            echo '🔍 Поиск и удаление конфликтующих location блоков...'
-            # Удаляем location = /api/lead-proxy
-            sudo sed -i '/location[[:space:]]*=[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
-            # Удаляем location /api/lead-proxy
-            sudo sed -i '/location[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
-            # Удаляем location = /api/calltouch-proxy
-            sudo sed -i '/location[[:space:]]*=[[:space:]]*\/api\/calltouch-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
-            # Удаляем location /api/calltouch-proxy
-            sudo sed -i '/location[[:space:]]*\/api\/calltouch-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
-            echo '✅ Конфликтующие location блоки удалены (если были)'
-            
-            # calltouch-proxy уже включен в api-proxy.conf, отдельный файл не нужен
-            echo '✅ calltouch-proxy включен в api-proxy.conf'
             
             # Проверяем еще раз после удаления
             if grep -q 'location.*\/api\/lead-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
