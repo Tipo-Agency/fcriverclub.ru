@@ -109,7 +109,25 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
     let result;
     try {
       result = responseText ? JSON.parse(responseText) : {};
-      console.log('[LeadService] Распарсенный ответ от 1C:', result);
+      console.log('[LeadService] Распарсенный ответ от сервера:', result);
+      
+      // Логируем информацию о Calltouch
+      if (result.calltouch) {
+        if (result.calltouch.sent) {
+          console.log('[LeadService] ✅ Calltouch: заявка успешно отправлена', {
+            http_code: result.calltouch.http_code,
+            response: result.calltouch.response
+          });
+        } else {
+          console.error('[LeadService] ❌ Calltouch: ошибка отправки', {
+            http_code: result.calltouch.http_code,
+            error: result.calltouch.error,
+            response: result.calltouch.response
+          });
+        }
+      } else {
+        console.warn('[LeadService] ⚠️ Calltouch: информация отсутствует в ответе');
+      }
     } catch (e) {
       // Если ответ не JSON, но статус OK - считаем успехом
       console.log('[LeadService] Ответ не JSON, но статус OK. Текст ответа:', responseText);
