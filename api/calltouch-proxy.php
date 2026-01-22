@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Calltouch API настройки
 $CALLTOUCH_SITE_ID = '52898';
 // Правильный URL согласно документации Calltouch
+// URL: https://api.calltouch.ru/calls-service/RestAPI/requests/{site_id}/register/
 $CALLTOUCH_API_URL = "https://api.calltouch.ru/calls-service/RestAPI/requests/{$CALLTOUCH_SITE_ID}/register/";
 
 // Получаем тело запроса
@@ -79,6 +80,11 @@ if (isset($payload['requestUrl'])) {
 
 // Формируем POST данные в формате application/x-www-form-urlencoded
 $postData = http_build_query($calltouchParams);
+
+// Логируем URL для отладки (без чувствительных данных)
+error_log("[Calltouch Proxy] URL: " . $CALLTOUCH_API_URL);
+error_log("[Calltouch Proxy] Site ID: " . $CALLTOUCH_SITE_ID);
+error_log("[Calltouch Proxy] Params: " . substr($postData, 0, 200));
 
 // Отправляем POST запрос в Calltouch API
 $ch = curl_init($CALLTOUCH_API_URL);
