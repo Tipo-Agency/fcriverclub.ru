@@ -106,11 +106,11 @@ jobs:
             
             # Создаем конфигурацию с правильными путями
             sudo mkdir -p /etc/nginx/includes
-            sudo sed \"s|root /var/www/fcriverclub.ru;|root \$DOCUMENT_ROOT;|g; s|fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;|fastcgi_pass \$PHP_SOCKET;|g\" /tmp/nginx-api-proxy.conf > /tmp/api-proxy-custom.conf
+            sudo sed \"s|DOCUMENT_ROOT_PLACEHOLDER|\$DOCUMENT_ROOT|g; s|PHP_SOCKET_PLACEHOLDER|\$PHP_SOCKET|g; s|root /var/www/fcriverclub.ru;|root \$DOCUMENT_ROOT;|g; s|fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;|fastcgi_pass \$PHP_SOCKET;|g\" /tmp/nginx-api-proxy.conf > /tmp/api-proxy-custom.conf
             sudo cp /tmp/api-proxy-custom.conf /etc/nginx/includes/api-proxy.conf
             echo '✅ Конфигурация создана с правильными путями'
-            echo '📋 Проверка конфигурации:'
-            sudo grep -A 5 'location.*calltouch-proxy' /etc/nginx/includes/api-proxy.conf || echo '⚠️  calltouch-proxy location не найден'
+            echo '📋 Проверка конфигурации calltouch-proxy:'
+            sudo grep -A 10 'location.*calltouch-proxy' /etc/nginx/includes/api-proxy.conf || echo '⚠️  calltouch-proxy location не найден'
             
             # Ищем активный конфиг nginx
             NGINX_CONF=\$(ls /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1)
@@ -146,21 +146,8 @@ jobs:
             sudo sed -i '/location[[:space:]]*\/api\/calltouch-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
             echo '✅ Конфликтующие location блоки удалены (если были)'
             
-            # Добавляем location для calltouch-proxy напрямую в конфиг
-            if ! grep -q 'location.*\/api\/calltouch-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
-              echo '📝 Добавляем location для /api/calltouch-proxy напрямую в конфиг...'
-              # Копируем готовый файл конфигурации и заменяем плейсхолдеры
-              sudo cp /tmp/nginx-calltouch-proxy.conf /etc/nginx/includes/calltouch-proxy.conf
-              sudo sed -i \"s|DOCUMENT_ROOT_PLACEHOLDER|\$DOCUMENT_ROOT|g; s|PHP_SOCKET_PLACEHOLDER|\$PHP_SOCKET|g\" /etc/nginx/includes/calltouch-proxy.conf
-              echo '✅ Файл конфигурации calltouch-proxy создан'
-              
-              # Добавляем include в основной конфиг
-              if ! grep -q 'include.*calltouch-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
-                sudo sed -i '/include.*api-proxy.conf/a\    include /etc/nginx/includes/calltouch-proxy.conf;' \"\$NGINX_CONF\"
-                echo '✅ Include для calltouch-proxy.conf добавлен в конфиг'
-              fi
-              echo '✅ Location для calltouch-proxy создан'
-            fi
+            # calltouch-proxy уже включен в api-proxy.conf, отдельный файл не нужен
+            echo '✅ calltouch-proxy включен в api-proxy.conf'
             
             # Проверяем еще раз после удаления
             if grep -q 'location.*\/api\/lead-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
