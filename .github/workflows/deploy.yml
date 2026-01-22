@@ -53,6 +53,14 @@ jobs:
           echo "Copying nginx API proxy config..."
           scp -o StrictHostKeyChecking=no nginx-api-proxy.conf ${SERVER_USER}@${SERVER_HOST}:/tmp/nginx-api-proxy.conf
           
+          # Создаем директорию api на сервере перед копированием PHP файла
+          echo "Creating /api directory on server..."
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "mkdir -p ${SERVER_PATH}/api"
+          
+          # Копируем PHP прокси файл на сервер
+          echo "Copying PHP proxy file..."
+          scp -o StrictHostKeyChecking=no api/lead-proxy.php ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/api/lead-proxy.php
+          
           # Копируем все собранные файлы из dist на сервер
           echo "Copying new files to server..."
           scp -o StrictHostKeyChecking=no -r dist/* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/
