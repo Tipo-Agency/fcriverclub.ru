@@ -61,6 +61,19 @@ jobs:
           echo "Copying PHP proxy file..."
           scp -o StrictHostKeyChecking=no api/lead-proxy.php ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/api/lead-proxy.php
           
+          # Проверяем, что файл скопировался и устанавливаем права
+          echo "Verifying PHP file and setting permissions..."
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "
+            if [ -f ${SERVER_PATH}/api/lead-proxy.php ]; then
+              chmod 644 ${SERVER_PATH}/api/lead-proxy.php
+              echo '✅ PHP файл успешно скопирован: '${SERVER_PATH}/api/lead-proxy.php
+              ls -la ${SERVER_PATH}/api/lead-proxy.php
+            else
+              echo '❌ ОШИБКА: PHP файл не найден после копирования!'
+              exit 1
+            fi
+          "
+          
           # Копируем все собранные файлы из dist на сервер
           echo "Copying new files to server..."
           scp -o StrictHostKeyChecking=no -r dist/* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/
@@ -71,9 +84,28 @@ jobs:
           # Настраиваем nginx для проксирования /api/lead-proxy
           echo "Configuring nginx for API proxy..."
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "
-            # Копируем конфигурацию в постоянное место
+            # Определяем версию PHP и путь к сокету
+            PHP_SOCKET=\$(ls /var/run/php/php*-fpm.sock 2>/dev/null | head -1)
+            if [ -z \"\$PHP_SOCKET\" ]; then
+              # Пробуем через TCP
+              PHP_SOCKET='127.0.0.1:9000'
+              echo '⚠️  PHP-FPM socket не найден, используем TCP: '\$PHP_SOCKET
+            else
+              echo '✅ Найден PHP-FPM socket: '\$PHP_SOCKET
+            fi
+            
+            # Определяем document_root из конфига nginx
+            DOCUMENT_ROOT=\$(grep -E '^\s*root\s+' /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1 | awk '{print \$2}' | tr -d ';' || echo '${SERVER_PATH}')
+            if [ -z \"\$DOCUMENT_ROOT\" ] || [ \"\$DOCUMENT_ROOT\" = \"${SERVER_PATH}\" ]; then
+              DOCUMENT_ROOT='${SERVER_PATH}'
+            fi
+            echo '📁 Document root: '\$DOCUMENT_ROOT
+            
+            # Создаем конфигурацию с правильными путями
             sudo mkdir -p /etc/nginx/includes
-            sudo cp /tmp/nginx-api-proxy.conf /etc/nginx/includes/api-proxy.conf
+            sudo sed \"s|root /var/www/fcriverclub.ru;|root \$DOCUMENT_ROOT;|g; s|fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;|fastcgi_pass \$PHP_SOCKET;|g\" /tmp/nginx-api-proxy.conf > /tmp/api-proxy-custom.conf
+            sudo cp /tmp/api-proxy-custom.conf /etc/nginx/includes/api-proxy.conf
+            echo '✅ Конфигурация создана с правильными путями'
             
             # Ищем активный конфиг nginx
             NGINX_CONF=\$(ls /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1)
