@@ -133,13 +133,58 @@ jobs:
               echo 'ℹ️  Include api-proxy.conf уже присутствует в конфигурации'
             fi
             
-            # Удаляем ВСЕ конфликтующие location блоки для /api/lead-proxy из основного конфига
+            # Удаляем ВСЕ конфликтующие location блоки для /api/lead-proxy и /api/calltouch-proxy из основного конфига
             echo '🔍 Поиск и удаление конфликтующих location блоков...'
             # Удаляем location = /api/lead-proxy
             sudo sed -i '/location[[:space:]]*=[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
             # Удаляем location /api/lead-proxy
             sudo sed -i '/location[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
+            # Удаляем location = /api/calltouch-proxy
+            sudo sed -i '/location[[:space:]]*=[[:space:]]*\/api\/calltouch-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
+            # Удаляем location /api/calltouch-proxy
+            sudo sed -i '/location[[:space:]]*\/api\/calltouch-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
             echo '✅ Конфликтующие location блоки удалены (если были)'
+            
+            # Добавляем location для calltouch-proxy напрямую в конфиг
+            if ! grep -q 'location.*\/api\/calltouch-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
+              echo '📝 Добавляем location для /api/calltouch-proxy напрямую в конфиг...'
+              # Создаем отдельный файл конфигурации для calltouch-proxy
+              sudo tee /etc/nginx/includes/calltouch-proxy.conf > /dev/null << CALLTOUCH_EOF
+    location = /api/calltouch-proxy {
+        if (\$request_method = OPTIONS) {
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Content-Type' always;
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Length' 0;
+            add_header 'Content-Type' 'text/plain';
+            return 204;
+        }
+        root \$DOCUMENT_ROOT;
+        fastcgi_pass \$PHP_SOCKET;
+        fastcgi_index calltouch-proxy.php;
+        fastcgi_param SCRIPT_FILENAME \$document_root/api/calltouch-proxy.php;
+        include fastcgi_params;
+        fastcgi_param REQUEST_METHOD \$request_method;
+        fastcgi_param CONTENT_TYPE \$content_type;
+        fastcgi_param CONTENT_LENGTH \$content_length;
+        fastcgi_read_timeout 30;
+        fastcgi_buffering off;
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'Content-Type' always;
+    }
+CALLTOUCH_EOF
+              # Заменяем плейсхолдеры в файле
+              sudo sed -i \"s|\\\$DOCUMENT_ROOT|\$DOCUMENT_ROOT|g; s|\\\$PHP_SOCKET|\$PHP_SOCKET|g\" /etc/nginx/includes/calltouch-proxy.conf
+              
+              # Добавляем include в основной конфиг
+              if ! grep -q 'include.*calltouch-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
+                sudo sed -i '/include.*api-proxy.conf/a\    include /etc/nginx/includes/calltouch-proxy.conf;' \"\$NGINX_CONF\"
+                echo '✅ Include для calltouch-proxy.conf добавлен в конфиг'
+              fi
+              echo '✅ Location для calltouch-proxy создан'
+            fi
             
             # Проверяем еще раз после удаления
             if grep -q 'location.*\/api\/lead-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
