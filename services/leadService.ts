@@ -93,11 +93,11 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
     // Проверяем статус ответа
     const responseText = await response.text().catch(() => '');
     
-    console.log('[LeadService] Полный ответ от 1C:', responseText);
+    console.log('[LeadService] Полный ответ от сервера (1C + Calltouch):', responseText);
     
     // Если ответ не OK, возвращаем ошибку
     if (!response.ok) {
-      console.error('Failed to send lead:', {
+      console.error('[LeadService] ❌ Ошибка отправки заявки:', {
         status: response.status,
         statusText: response.statusText,
         response: responseText
@@ -111,26 +111,40 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
       result = responseText ? JSON.parse(responseText) : {};
       console.log('[LeadService] Распарсенный ответ от сервера:', result);
       
+      // Логируем информацию о 1C
+      if (result.success !== undefined) {
+        console.log('[LeadService] 1C:', result.success ? '✅ Заявка отправлена' : '❌ Ошибка отправки', {
+          data: result.data
+        });
+      }
+      
       // Логируем информацию о Calltouch
       if (result.calltouch) {
+        console.log('[LeadService] 📞 Calltouch статус:', {
+          sent: result.calltouch.sent,
+          http_code: result.calltouch.http_code,
+          error: result.calltouch.error,
+          response: result.calltouch.response,
+          debug: result.calltouch.debug
+        });
+        
         if (result.calltouch.sent) {
-          console.log('[LeadService] ✅ Calltouch: заявка успешно отправлена', {
-            http_code: result.calltouch.http_code,
-            response: result.calltouch.response
-          });
+          console.log('[LeadService] ✅ Calltouch: заявка успешно отправлена в Calltouch API');
         } else {
-          console.error('[LeadService] ❌ Calltouch: ошибка отправки', {
+          console.error('[LeadService] ❌ Calltouch: ошибка отправки в Calltouch API', {
             http_code: result.calltouch.http_code,
             error: result.calltouch.error,
-            response: result.calltouch.response
+            response: result.calltouch.response,
+            debug_url: result.calltouch.debug?.url
           });
         }
       } else {
-        console.warn('[LeadService] ⚠️ Calltouch: информация отсутствует в ответе');
+        console.warn('[LeadService] ⚠️ Calltouch: информация отсутствует в ответе сервера');
       }
     } catch (e) {
       // Если ответ не JSON, но статус OK - считаем успехом
       console.log('[LeadService] Ответ не JSON, но статус OK. Текст ответа:', responseText);
+      console.warn('[LeadService] ⚠️ Не удалось распарсить ответ как JSON, информация о Calltouch недоступна');
       result = {};
     }
     
