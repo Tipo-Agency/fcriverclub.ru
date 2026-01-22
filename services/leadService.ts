@@ -12,9 +12,10 @@ const CALLTOUCH_SITE_ID = '52898';
 const CALLTOUCH_MOD_ID = 'r2kmsp7t';
 // В Vite переменные окружения доступны через import.meta.env (для переменных с префиксом VITE_)
 // Также поддерживаем process.env через define в vite.config.ts
+// Используем правильный синтаксис: в Vite import.meta.env всегда доступен
 const CALLTOUCH_API_TOKEN = 
-  (typeof import !== 'undefined' && (import.meta as any).env?.VITE_CALLTOUCH_API_TOKEN) ||
-  (typeof process !== 'undefined' && (process as any).env?.VITE_CALLTOUCH_API_TOKEN) ||
+  ((import.meta as any)?.env?.VITE_CALLTOUCH_API_TOKEN as string) ||
+  ((typeof process !== 'undefined' && (process as any).env?.VITE_CALLTOUCH_API_TOKEN) as string) ||
   '0b9ea4940475d676014768f9478f3b5062130d223af84'; // Fallback для разработки
 const CALLTOUCH_API_URL = `https://api.calltouch.ru/calls-service/RestAPI/${CALLTOUCH_SITE_ID}/register-lead-dict`;
 
