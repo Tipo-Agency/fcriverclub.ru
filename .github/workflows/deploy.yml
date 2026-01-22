@@ -129,13 +129,21 @@ jobs:
             fi
             echo '📁 Document root: '\$DOCUMENT_ROOT
             
-            # Создаем конфигурацию с правильными путями
+            # Создаем конфигурацию api-proxy.conf для lead-proxy (calltouch добавляем напрямую в конфиг)
             sudo mkdir -p /etc/nginx/includes
             sudo sed \"s|DOCUMENT_ROOT_PLACEHOLDER|\$DOCUMENT_ROOT|g; s|PHP_SOCKET_PLACEHOLDER|\$PHP_SOCKET|g; s|root /var/www/fcriverclub.ru;|root \$DOCUMENT_ROOT;|g; s|fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;|fastcgi_pass \$PHP_SOCKET;|g\" /tmp/nginx-api-proxy.conf > /tmp/api-proxy-custom.conf
             sudo cp /tmp/api-proxy-custom.conf /etc/nginx/includes/api-proxy.conf
-            echo '✅ Конфигурация создана с правильными путями'
-            echo '📋 Проверка конфигурации calltouch-proxy:'
-            sudo grep -A 10 'location.*calltouch-proxy' /etc/nginx/includes/api-proxy.conf || echo '⚠️  calltouch-proxy location не найден'
+            echo '✅ Конфигурация api-proxy.conf создана для lead-proxy'
+            
+            # Добавляем include для api-proxy.conf (только для lead-proxy, calltouch добавляем напрямую)
+            if ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
+              if grep -q 'location[[:space:]]*/' \"\$NGINX_CONF\" 2>/dev/null; then
+                sudo sed -i '/location[[:space:]]*\//i\    include /etc/nginx/includes/api-proxy.conf;' \"\$NGINX_CONF\"
+              else
+                sudo awk '/^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/ {if (/^[[:space:]]*}/ && !added) {print \"    include /etc/nginx/includes/api-proxy.conf;\"; added=1} print}' \"\$NGINX_CONF\" > \"\$NGINX_CONF.tmp\" && sudo mv \"\$NGINX_CONF.tmp\" \"\$NGINX_CONF\"
+              fi
+              echo '✅ Include для api-proxy.conf добавлен'
+            fi
             
             # Ищем активный конфиг nginx
             NGINX_CONF=\$(ls /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1)
@@ -181,11 +189,6 @@ jobs:
               exit 1
             fi
             
-            # Проверяем еще раз после удаления
-            if grep -q 'location.*\/api\/lead-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
-              echo '⚠️  Warning: Все еще есть location /api/lead-proxy в основном конфиге!'
-              sudo grep -n 'location.*\/api\/lead-proxy' \"\$NGINX_CONF\" || true
-            fi
             
             # Проверяем, что конфигурация правильно применена
             echo '🔍 Проверка nginx конфигурации:'
