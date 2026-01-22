@@ -27,7 +27,6 @@ $WEBHOOK_URL_1C = 'https://cloud.1c.fitness/api/hs/lead/Webhook/9a93d939-e1e3-49
 // Calltouch API настройки
 // ВАЖНО: API-токен для создания заявок НЕ ТРЕБУЕТСЯ согласно документации!
 $CALLTOUCH_SITE_ID = '52898';
-$CALLTOUCH_MOD_ID = 'r2kmsp7t'; // Используется только для получения sessionId из JS
 $CALLTOUCH_API_URL = "https://api.calltouch.ru/calls-service/RestAPI/requests/{$CALLTOUCH_SITE_ID}/register/";
 
 // Получаем тело запроса
@@ -40,121 +39,101 @@ if (json_last_error() !== JSON_ERROR_NONE) {
     exit;
 }
 
-// ВРЕМЕННО: Отключаем отправку в 1C для отладки Calltouch
-// TODO: Включить обратно после отладки Calltouch
-/*
-$ch = curl_init($WEBHOOK_URL_1C);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
+// Отправляем в 1C
+$ch1C = curl_init($WEBHOOK_URL_1C);
+curl_setopt($ch1C, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch1C, CURLOPT_POST, true);
+curl_setopt($ch1C, CURLOPT_POSTFIELDS, $data);
+curl_setopt($ch1C, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json',
     'Content-Length: ' . strlen($data)
 ]);
+curl_setopt($ch1C, CURLOPT_TIMEOUT, 10);
 
-$response1C = curl_exec($ch);
-$httpCode1C = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curlError1C = curl_error($ch);
-curl_close($ch);
+$response1C = curl_exec($ch1C);
+$httpCode1C = curl_getinfo($ch1C, CURLINFO_HTTP_CODE);
+$curlError1C = curl_error($ch1C);
+curl_close($ch1C);
 
-if ($curlError1C) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Failed to connect to 1C webhook']);
-    exit;
-}
-*/
-
-// ВРЕМЕННО: Имитируем успешный ответ от 1C
-$response1C = 'ok (temporarily disabled for Calltouch debugging)';
-$httpCode1C = 200;
-$curlError1C = null;
-
-// Отправляем в Calltouch (теперь всегда, не зависимо от 1C)
+// Отправляем в Calltouch после отправки в 1C
 $calltouchSuccess = false;
 $calltouchError = null;
 $calltouchResponse = null;
 $calltouchHttpCode = null;
 
-// Отправляем в Calltouch
-{
-    // Формируем данные для Calltouch
-    $name = $payload['name'] ?? '';
-    $lastName = $payload['last_name'] ?? '';
-    $phone = $payload['phone'] ?? '';
-    $email = $payload['email'] ?? '';
-    $comment = $payload['comment'] ?? 'Заявка с сайта';
-    
-    // Объединяем имя и фамилию для Calltouch
-    $fullName = trim($name . ' ' . $lastName);
-    if (empty($fullName)) {
-        $fullName = $name;
-    }
-    
-    // Формируем URL с параметрами для Calltouch
-    $calltouchParams = http_build_query([
-        'site_id' => $CALLTOUCH_SITE_ID,
-        'mod_id' => $CALLTOUCH_MOD_ID,
-        'access_token' => $CALLTOUCH_API_TOKEN,
-        'name' => $fullName,
-        'phone' => $phone,
-        'email' => $email,
-        'comment' => $comment,
-        'targetRequest' => 'true',
-    ]);
-    
-    $calltouchUrl = $CALLTOUCH_API_URL . '?' . $calltouchParams;
-    
-    // Логируем параметры для отладки (без токена в логах)
-    $debugParams = $calltouchParams;
-    $debugParams = preg_replace('/access_token=[^&]*/', 'access_token=***', $debugParams);
-    
-    // Отправляем GET запрос в Calltouch API (согласно документации Calltouch)
-    $chCalltouch = curl_init($calltouchUrl);
-    curl_setopt($chCalltouch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($chCalltouch, CURLOPT_HTTPGET, true);
-    curl_setopt($chCalltouch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($chCalltouch, CURLOPT_SSL_VERIFYPEER, true);
-    curl_setopt($chCalltouch, CURLOPT_TIMEOUT, 10);
-    curl_setopt($chCalltouch, CURLOPT_USERAGENT, 'RiverClub/1.0');
-    
-    $responseCalltouch = curl_exec($chCalltouch);
-    $calltouchHttpCode = curl_getinfo($chCalltouch, CURLINFO_HTTP_CODE);
-    $curlErrorCalltouch = curl_error($chCalltouch);
-    $curlInfo = curl_getinfo($chCalltouch);
-    curl_close($chCalltouch);
-    
-    if ($curlErrorCalltouch) {
-        $calltouchError = 'CURL Error: ' . $curlErrorCalltouch;
-    } elseif ($calltouchHttpCode >= 200 && $calltouchHttpCode < 300) {
-        $calltouchSuccess = true;
-        $calltouchResponse = $responseCalltouch;
-    } else {
-        $calltouchError = "HTTP {$calltouchHttpCode}: " . substr($responseCalltouch, 0, 200);
-    }
-    
-    // Сохраняем информацию для логирования
-    $calltouchDebug = [
-        'url' => preg_replace('/access_token=[^&]*/', 'access_token=***', $calltouchUrl),
-        'params' => $debugParams,
-        'http_code' => $calltouchHttpCode,
-        'response_length' => strlen($responseCalltouch),
-        'curl_error' => $curlErrorCalltouch,
-        'full_response' => $responseCalltouch
-    ];
+// Формируем данные для Calltouch согласно документации
+$name = $payload['name'] ?? '';
+$lastName = $payload['last_name'] ?? '';
+$phone = $payload['phone'] ?? '';
+$email = $payload['email'] ?? '';
+$comment = $payload['comment'] ?? 'Заявка с сайта';
+$subject = $payload['subject'] ?? 'Заявка с сайта fcriverclub.ru';
+
+// Объединяем имя и фамилию для параметра fio
+$fio = trim($name . ' ' . $lastName);
+if (empty($fio)) {
+    $fio = $name;
 }
 
-// ВРЕМЕННО: Всегда возвращаем успех для отладки Calltouch
+// Формируем POST данные согласно документации Calltouch
+// ВАЖНО: Используем urlencode для всех параметров с кириллицей!
+$postFields = [];
+$postFields[] = 'fio=' . urlencode($fio);
+$postFields[] = 'phoneNumber=' . urlencode($phone);
+$postFields[] = 'email=' . urlencode($email);
+$postFields[] = 'subject=' . urlencode($subject);
+$postFields[] = 'comment=' . urlencode($comment);
+$postFields[] = 'targetRequest=true';
+
+// Добавляем sessionId если есть (из payload)
+if (isset($payload['sessionId']) && !empty($payload['sessionId'])) {
+    $postFields[] = 'sessionId=' . urlencode($payload['sessionId']);
+}
+
+// Добавляем requestUrl если есть
+if (isset($payload['requestUrl']) && !empty($payload['requestUrl'])) {
+    $postFields[] = 'requestUrl=' . urlencode($payload['requestUrl']);
+}
+
+$postData = implode('&', $postFields);
+
+// Отправляем POST запрос в Calltouch API
+$chCalltouch = curl_init($CALLTOUCH_API_URL);
+curl_setopt($chCalltouch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($chCalltouch, CURLOPT_POST, true);
+curl_setopt($chCalltouch, CURLOPT_POSTFIELDS, $postData);
+curl_setopt($chCalltouch, CURLOPT_HTTPHEADER, [
+    'Content-Type: application/x-www-form-urlencoded;charset=utf-8',
+    'User-Agent: RiverClub/1.0'
+]);
+curl_setopt($chCalltouch, CURLOPT_FOLLOWLOCATION, false);
+curl_setopt($chCalltouch, CURLOPT_SSL_VERIFYPEER, true);
+curl_setopt($chCalltouch, CURLOPT_TIMEOUT, 15);
+
+$responseCalltouch = curl_exec($chCalltouch);
+$calltouchHttpCode = curl_getinfo($chCalltouch, CURLINFO_HTTP_CODE);
+$curlErrorCalltouch = curl_error($chCalltouch);
+curl_close($chCalltouch);
+
+if ($curlErrorCalltouch) {
+    $calltouchError = 'CURL Error: ' . $curlErrorCalltouch;
+} elseif ($calltouchHttpCode >= 200 && $calltouchHttpCode < 300) {
+    $calltouchSuccess = true;
+    $calltouchResponse = $responseCalltouch;
+} else {
+    $calltouchError = "HTTP {$calltouchHttpCode}: " . substr($responseCalltouch, 0, 200);
+}
+
+// Возвращаем результат
 http_response_code(200);
 echo json_encode([
-    'success' => true,
+    'success' => $httpCode1C >= 200 && $httpCode1C < 300,
     'data' => $response1C,
-    'note' => '1C temporarily disabled for Calltouch debugging',
     'calltouch' => [
         'sent' => $calltouchSuccess,
         'http_code' => $calltouchHttpCode,
         'error' => $calltouchError,
-        'response' => $calltouchResponse ? substr($calltouchResponse, 0, 500) : null,
-        'debug' => isset($calltouchDebug) ? $calltouchDebug : null
+        'response' => $calltouchResponse ? substr($calltouchResponse, 0, 500) : null
     ]
-]);
+], JSON_UNESCAPED_UNICODE);
 ?>
