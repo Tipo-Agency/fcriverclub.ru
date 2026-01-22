@@ -148,20 +148,19 @@ jobs:
             # Добавляем location для calltouch-proxy напрямую в конфиг
             if ! grep -q 'location.*\/api\/calltouch-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
               echo '📝 Добавляем location для /api/calltouch-proxy напрямую в конфиг...'
-              # Создаем отдельный файл конфигурации для calltouch-proxy
-              sudo tee /etc/nginx/includes/calltouch-proxy.conf > /dev/null << 'CALLTOUCH_EOF'
-    location = /api/calltouch-proxy {
+              # Создаем отдельный файл конфигурации для calltouch-proxy через printf
+              sudo printf '    location = /api/calltouch-proxy {
         if ($request_method = OPTIONS) {
-            add_header 'Access-Control-Allow-Origin' '*' always;
-            add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS' always;
-            add_header 'Access-Control-Allow-Headers' 'Content-Type' always;
-            add_header 'Access-Control-Max-Age' 1728000;
-            add_header 'Content-Length' 0;
-            add_header 'Content-Type' 'text/plain';
+            add_header '\''Access-Control-Allow-Origin'\'' '\''*'\'' always;
+            add_header '\''Access-Control-Allow-Methods'\'' '\''POST, OPTIONS'\'' always;
+            add_header '\''Access-Control-Allow-Headers'\'' '\''Content-Type'\'' always;
+            add_header '\''Access-Control-Max-Age'\'' 1728000;
+            add_header '\''Content-Length'\'' 0;
+            add_header '\''Content-Type'\'' '\''text/plain'\'';
             return 204;
         }
-        root DOCUMENT_ROOT_PLACEHOLDER;
-        fastcgi_pass PHP_SOCKET_PLACEHOLDER;
+        root %s;
+        fastcgi_pass %s;
         fastcgi_index calltouch-proxy.php;
         fastcgi_param SCRIPT_FILENAME $document_root/api/calltouch-proxy.php;
         include fastcgi_params;
@@ -170,13 +169,11 @@ jobs:
         fastcgi_param CONTENT_LENGTH $content_length;
         fastcgi_read_timeout 30;
         fastcgi_buffering off;
-        add_header 'Access-Control-Allow-Origin' '*' always;
-        add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS' always;
-        add_header 'Access-Control-Allow-Headers' 'Content-Type' always;
+        add_header '\''Access-Control-Allow-Origin'\'' '\''*'\'' always;
+        add_header '\''Access-Control-Allow-Methods'\'' '\''POST, OPTIONS'\'' always;
+        add_header '\''Access-Control-Allow-Headers'\'' '\''Content-Type'\'' always;
     }
-CALLTOUCH_EOF
-              # Заменяем плейсхолдеры в файле
-              sudo sed -i \"s|\\\$DOCUMENT_ROOT|\$DOCUMENT_ROOT|g; s|\\\$PHP_SOCKET|\$PHP_SOCKET|g\" /etc/nginx/includes/calltouch-proxy.conf
+' \"\$DOCUMENT_ROOT\" \"\$PHP_SOCKET\" > /etc/nginx/includes/calltouch-proxy.conf
               
               # Добавляем include в основной конфиг
               if ! grep -q 'include.*calltouch-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
