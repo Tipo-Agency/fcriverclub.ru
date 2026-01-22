@@ -67,11 +67,16 @@ $calltouchParams = http_build_query([
 
 $calltouchUrl = $CALLTOUCH_API_URL . '?' . $calltouchParams;
 
-// Отправляем GET запрос в Calltouch API
-$ch = curl_init($calltouchUrl);
+// Пробуем POST запрос (согласно документации Calltouch может требовать POST)
+// Если не работает, попробуем GET
+$ch = curl_init($CALLTOUCH_API_URL);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_HTTPGET, true);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $calltouchParams);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Content-Type: application/x-www-form-urlencoded',
+]);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false); // Не следовать редиректам
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_USERAGENT, 'RiverClub/1.0');
