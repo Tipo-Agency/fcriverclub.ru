@@ -7,18 +7,6 @@ import { collectAnalyticsData } from '../utils/analytics';
 // URL прокси endpoint (будет проксировать на 1C)
 const PROXY_ENDPOINT = '/api/lead-proxy';
 
-// Calltouch API настройки
-const CALLTOUCH_SITE_ID = '52898';
-const CALLTOUCH_MOD_ID = 'r2kmsp7t';
-// В Vite переменные окружения доступны через import.meta.env (для переменных с префиксом VITE_)
-// Также поддерживаем process.env через define в vite.config.ts
-// Используем правильный синтаксис: в Vite import.meta.env всегда доступен
-const CALLTOUCH_API_TOKEN = 
-  ((import.meta as any)?.env?.VITE_CALLTOUCH_API_TOKEN as string) ||
-  ((typeof process !== 'undefined' && (process as any).env?.VITE_CALLTOUCH_API_TOKEN) as string) ||
-  '0b9ea4940475d676014768f9478f3b5062130d223af84'; // Fallback для разработки
-const CALLTOUCH_API_URL = `https://api.calltouch.ru/calls-service/RestAPI/${CALLTOUCH_SITE_ID}/register-lead-dict`;
-
 export interface LeadData {
   name?: string;
   last_name?: string;
@@ -31,51 +19,6 @@ export interface LeadData {
 /**
  * Нормализует номер телефона (убирает все, кроме цифр)
  */
-/**
- * Отправляет заявку в Calltouch API
- */
-const sendLeadToCalltouch = async (data: {
-  name: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  comment: string;
-  subject: string;
-}): Promise<void> => {
-  try {
-    // Формируем URL с параметрами
-    const params = new URLSearchParams({
-      site_id: CALLTOUCH_SITE_ID,
-      mod_id: CALLTOUCH_MOD_ID,
-      access_token: CALLTOUCH_API_TOKEN,
-      name: data.name || '',
-      phone: data.phone,
-      email: data.email || '',
-      comment: data.comment || data.subject || 'Заявка с сайта',
-      targetRequest: 'true', // Целевая заявка
-    });
-
-    console.log('[LeadService] Отправка заявки в Calltouch API:', params.toString());
-
-    // Используем GET метод согласно инструкции Calltouch API
-    const response = await fetch(`${CALLTOUCH_API_URL}?${params.toString()}`, {
-      method: 'GET',
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      console.error('[LeadService] Calltouch API вернул ошибку:', response.status, errorText);
-      throw new Error(`Calltouch API error: ${response.status}`);
-    }
-
-    const result = await response.json().catch(() => ({}));
-    console.log('[LeadService] Calltouch API ответ:', result);
-  } catch (error) {
-    console.error('[LeadService] Ошибка отправки в Calltouch API:', error);
-    throw error;
-  }
-};
-
 export const normalizePhone = (phone: string): string => {
   // Убираем все, кроме цифр
   const digits = phone.replace(/\D/g, '');
@@ -197,20 +140,8 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
       }
     }
     
-    // Отправляем заявку в Calltouch API
-    try {
-      await sendLeadToCalltouch({
-        name: firstName,
-        lastName: lastName,
-        phone: normalizedPhone,
-        email: data.email || '',
-        comment: data.comment || (data.subject ? `Тема заявки: ${data.subject}` : 'Новая заявка с сайта'),
-        subject: data.subject || 'Заявка с сайта',
-      });
-    } catch (error) {
-      // Не блокируем успех, если Calltouch не ответил
-      console.warn('[LeadService] Ошибка отправки в Calltouch API (не критично):', error);
-    }
+    // Отправка в Calltouch API теперь происходит на сервере через PHP прокси (api/lead-proxy.php)
+    // Это решает проблему CORS, так как запросы с клиента блокируются политикой безопасности браузера
     
     // Отправляем событие в Calltouch (клиентское)
     if (typeof window !== 'undefined' && (window as any).ct) {

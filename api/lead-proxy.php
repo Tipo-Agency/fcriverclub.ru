@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP прокси для отправки лидов в 1C
+ * PHP прокси для отправки лидов в 1C и Calltouch
  * Используется в production для обхода CORS
  */
 
@@ -22,7 +22,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$WEBHOOK_URL = 'https://cloud.1c.fitness/api/hs/lead/Webhook/9a93d939-e1e3-49b9-be61-0439957207f4';
+$WEBHOOK_URL_1C = 'https://cloud.1c.fitness/api/hs/lead/Webhook/9a93d939-e1e3-49b9-be61-0439957207f4';
+
+// Calltouch API настройки
+$CALLTOUCH_SITE_ID = '52898';
+$CALLTOUCH_MOD_ID = 'r2kmsp7t';
+$CALLTOUCH_API_TOKEN = getenv('VITE_CALLTOUCH_API_TOKEN') ?: '0b9ea4940475d676014768f9478f3b5062130d223af84';
+$CALLTOUCH_API_URL = "https://api.calltouch.ru/calls-service/RestAPI/{$CALLTOUCH_SITE_ID}/register-lead-dict";
 
 // Получаем тело запроса
 $data = file_get_contents('php://input');
@@ -35,7 +41,7 @@ if (json_last_error() !== JSON_ERROR_NONE) {
 }
 
 // Отправляем запрос к 1C
-$ch = curl_init($WEBHOOK_URL);
+$ch = curl_init($WEBHOOK_URL_1C);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
@@ -44,17 +50,58 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Length: ' . strlen($data)
 ]);
 
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curlError = curl_error($ch);
+$response1C = curl_exec($ch);
+$httpCode1C = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curlError1C = curl_error($ch);
 curl_close($ch);
 
-if ($curlError) {
+if ($curlError1C) {
     http_response_code(500);
     echo json_encode(['error' => 'Failed to connect to 1C webhook']);
     exit;
 }
 
-http_response_code($httpCode);
-echo json_encode(['success' => $httpCode >= 200 && $httpCode < 300, 'data' => $response]);
+// Если 1C успешно получил заявку, отправляем в Calltouch
+$calltouchSuccess = false;
+if ($httpCode1C >= 200 && $httpCode1C < 300) {
+    // Формируем данные для Calltouch
+    $name = $payload['name'] ?? '';
+    $lastName = $payload['last_name'] ?? '';
+    $phone = $payload['phone'] ?? '';
+    $email = $payload['email'] ?? '';
+    $comment = $payload['comment'] ?? 'Заявка с сайта';
+    
+    // Формируем URL с параметрами для Calltouch
+    $calltouchParams = http_build_query([
+        'site_id' => $CALLTOUCH_SITE_ID,
+        'mod_id' => $CALLTOUCH_MOD_ID,
+        'access_token' => $CALLTOUCH_API_TOKEN,
+        'name' => $name,
+        'phone' => $phone,
+        'email' => $email,
+        'comment' => $comment,
+        'targetRequest' => 'true',
+    ]);
+    
+    // Отправляем GET запрос в Calltouch API
+    $chCalltouch = curl_init($CALLTOUCH_API_URL . '?' . $calltouchParams);
+    curl_setopt($chCalltouch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($chCalltouch, CURLOPT_HTTPGET, true);
+    
+    $responseCalltouch = curl_exec($chCalltouch);
+    $httpCodeCalltouch = curl_getinfo($chCalltouch, CURLINFO_HTTP_CODE);
+    $curlErrorCalltouch = curl_error($chCalltouch);
+    curl_close($chCalltouch);
+    
+    if (!$curlErrorCalltouch && $httpCodeCalltouch >= 200 && $httpCodeCalltouch < 300) {
+        $calltouchSuccess = true;
+    }
+}
+
+http_response_code($httpCode1C);
+echo json_encode([
+    'success' => $httpCode1C >= 200 && $httpCode1C < 300,
+    'data' => $response1C,
+    'calltouch_sent' => $calltouchSuccess
+]);
 ?>
