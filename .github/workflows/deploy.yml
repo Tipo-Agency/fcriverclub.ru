@@ -142,39 +142,70 @@ jobs:
               NGINX_CONF=\"/etc/nginx/sites-available/default\"
             fi
             
-            # КРИТИЧНО: include должен быть ПЕРЕД location / чтобы точные совпадения имели приоритет
-            # Проверяем и обновляем конфигурацию nginx
-            if ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
-              # Ищем location / и вставляем include ПЕРЕД ним
-              if grep -q 'location[[:space:]]*/' \"\$NGINX_CONF\" 2>/dev/null; then
-                echo '📝 Вставляем include ПЕРЕД location / для приоритета...'
-                sudo sed -i '/location[[:space:]]*\//i\    include /etc/nginx/includes/api-proxy.conf;' \"\$NGINX_CONF\"
-              else
-                # Если location / нет, добавляем перед закрывающей скобкой server блока
-                sudo awk '/^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/ {
-                  if (/^[[:space:]]*}/ && !added) {
-                    print \"    include /etc/nginx/includes/api-proxy.conf;\"
-                    added=1
-                  }
-                  print
-                }' \"\$NGINX_CONF\" > \"\$NGINX_CONF.tmp\" && sudo mv \"\$NGINX_CONF.tmp\" \"\$NGINX_CONF\"
-              fi
-              echo 'ℹ️  Добавлен include api-proxy.conf в конфигурацию nginx'
+            # КРИТИЧНО: Добавляем location блок для calltouch-proxy НАПРЯМУЮ в конфиг
+            # Это гарантирует что он точно будет работать
+            echo '📝 Добавляем location блок для calltouch-proxy НАПРЯМУЮ в конфиг...'
+            
+            # Удаляем старый location блок если есть
+            sudo sed -i '/location[[:space:]]*=[[:space:]]*\/api\/calltouch-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
+            
+            # Формируем location блок для calltouch-proxy
+            CALLTOUCH_LOCATION_BLOCK=\"    location = /api/calltouch-proxy {
+        limit_except POST OPTIONS {
+            deny all;
+        }
+        if (\\\$request_method = OPTIONS) {
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Content-Type' always;
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Length' 0;
+            add_header 'Content-Type' 'text/plain';
+            return 204;
+        }
+        root \$DOCUMENT_ROOT;
+        fastcgi_pass \$PHP_SOCKET;
+        fastcgi_index calltouch-proxy.php;
+        fastcgi_param SCRIPT_FILENAME \\\$document_root/api/calltouch-proxy.php;
+        include fastcgi_params;
+        fastcgi_param REQUEST_METHOD \\\$request_method;
+        fastcgi_param CONTENT_TYPE \\\$content_type;
+        fastcgi_param CONTENT_LENGTH \\\$content_length;
+        fastcgi_read_timeout 30;
+        fastcgi_buffering off;
+        fastcgi_request_buffering off;
+        client_max_body_size 1M;
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'Content-Type' always;
+    }\"
+            
+            # Вставляем ПЕРЕД location / если он есть, иначе перед закрывающей скобкой server
+            if grep -q 'location[[:space:]]*/' \"\$NGINX_CONF\" 2>/dev/null; then
+              # Вставляем ПЕРЕД location /
+              echo \"\$CALLTOUCH_LOCATION_BLOCK\" | sudo sed -i '/location[[:space:]]*\//r /dev/stdin' \"\$NGINX_CONF\"
+              echo '✅ Location блок добавлен ПЕРЕД location /'
             else
-              echo 'ℹ️  Include api-proxy.conf уже присутствует в конфигурации'
-              # Проверяем что include идет ПЕРЕД location /
-              if grep -n 'include.*api-proxy.conf' \"\$NGINX_CONF\" | head -1 | awk -F: '{print \$1}' > /tmp/include_line && \
-                 grep -n 'location[[:space:]]*/' \"\$NGINX_CONF\" | head -1 | awk -F: '{print \$1}' > /tmp/location_line && \
-                 [ \"\$(cat /tmp/include_line)\" -lt \"\$(cat /tmp/location_line)\" ] 2>/dev/null; then
-                echo '✅ Include идет ПЕРЕД location / - порядок правильный'
-              else
-                echo '⚠️  Include идет ПОСЛЕ location / - нужно переместить!'
-                # Удаляем старый include
-                sudo sed -i '/include.*api-proxy.conf/d' \"\$NGINX_CONF\"
-                # Вставляем ПЕРЕД location /
-                sudo sed -i '/location[[:space:]]*\//i\    include /etc/nginx/includes/api-proxy.conf;' \"\$NGINX_CONF\"
-                echo '✅ Include перемещен ПЕРЕД location /'
-              fi
+              # Вставляем перед закрывающей скобкой server блока
+              sudo awk -v block=\"\$CALLTOUCH_LOCATION_BLOCK\" '/^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/ {
+                if (/^[[:space:]]*}/ && !added) {
+                  print block
+                  added=1
+                }
+                print
+              }' \"\$NGINX_CONF\" > \"\$NGINX_CONF.tmp\" && sudo mv \"\$NGINX_CONF.tmp\" \"\$NGINX_CONF\"
+              echo '✅ Location блок добавлен перед закрывающей скобкой server'
+            fi
+            
+            # Заменяем плейсхолдеры в только что добавленном блоке
+            sudo sed -i \"s|\\\$DOCUMENT_ROOT|\$DOCUMENT_ROOT|g; s|\\\$PHP_SOCKET|\$PHP_SOCKET|g\" \"\$NGINX_CONF\"
+            
+            # Проверяем что блок добавился
+            if sudo grep -q 'location.*calltouch-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
+              echo '✅ Location блок для calltouch-proxy найден в основном конфиге'
+            else
+              echo '❌ ОШИБКА: Location блок НЕ найден в конфиге!'
+              exit 1
             fi
             
             # Удаляем ВСЕ конфликтующие location блоки для /api/lead-proxy и /api/calltouch-proxy из основного конфига
