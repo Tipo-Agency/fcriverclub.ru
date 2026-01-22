@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { X, Send, Phone, User, CheckCircle } from 'lucide-react';
+import { X, Send, Phone, User } from 'lucide-react';
 import { sendLeadTo1C, type LeadData } from '../../services/leadService';
 import { handlePhoneChange } from '../../utils/phoneMask';
 
@@ -87,18 +87,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, s
                 <p className="text-river-gray text-sm font-medium">Мы свяжемся с вами в течение 15 минут для консультации.</p>
               </div>
 
-              {success ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-green-50 border border-green-200 text-green-700 px-6 py-8 rounded-2xl text-center"
-                >
-                  <CheckCircle size={48} className="mx-auto mb-4 text-green-600" />
-                  <h4 className="text-xl font-extrabold mb-2">Спасибо!</h4>
-                  <p className="text-sm font-medium">Заявка отправлена. Мы свяжемся с вами в ближайшее время.</p>
-                </motion.div>
-              ) : (
-                <form className="space-y-4" onSubmit={handleSubmit}>
+              <form className="space-y-4" onSubmit={handleSubmit}>
                   {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm font-medium">
                       {error}
@@ -137,7 +126,6 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, s
                   {isSubmitting ? 'Отправка...' : 'Отправить данные'}                   <Send size={16} />
                 </button>
               </form>
-              )}
               
               <p className="text-[10px] text-river-gray/50 font-bold uppercase tracking-widest mt-8 text-center leading-relaxed px-6">
                 Нажимая кнопку, вы соглашаетесь с{' '}
