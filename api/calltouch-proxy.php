@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Calltouch API настройки
+// Согласно документации: API-токен для создания заявок НЕ ТРЕБУЕТСЯ!
 $CALLTOUCH_SITE_ID = '52898';
 // Правильный URL согласно документации Calltouch
 // URL: https://api.calltouch.ru/calls-service/RestAPI/requests/{site_id}/register/
@@ -58,28 +59,24 @@ if (empty($fullName)) {
 $sessionId = $payload['sessionId'] ?? null;
 
 // Формируем параметры для Calltouch согласно документации
-// Параметры: subject, fio, phoneNumber, email, comment, targetRequest, sessionId (опционально)
-$calltouchParams = [
-    'subject' => $subject,
-    'fio' => $fullName,
-    'phoneNumber' => $phone,
-    'email' => $email,
-    'comment' => $comment,
-    'targetRequest' => 'true',
-];
+// ВАЖНО: Для корректной передачи кириллицы используем urlencode для всех параметров!
+// Формат: application/x-www-form-urlencoded;charset=utf-8
+$postData = 'fio=' . urlencode($fullName)
+    . '&phoneNumber=' . urlencode($phone)
+    . '&email=' . urlencode($email)
+    . '&subject=' . urlencode($subject)
+    . '&comment=' . urlencode($comment)
+    . '&targetRequest=true';
 
-// Добавляем sessionId если есть
+// Добавляем sessionId если есть (опционально, но рекомендуется для определения источника)
 if ($sessionId) {
-    $calltouchParams['sessionId'] = $sessionId;
+    $postData .= '&sessionId=' . urlencode($sessionId);
 }
 
 // Добавляем requestUrl (адрес страницы отправки формы)
-if (isset($payload['requestUrl'])) {
-    $calltouchParams['requestUrl'] = $payload['requestUrl'];
+if (isset($payload['requestUrl']) && !empty($payload['requestUrl'])) {
+    $postData .= '&requestUrl=' . urlencode($payload['requestUrl']);
 }
-
-// Формируем POST данные в формате application/x-www-form-urlencoded
-$postData = http_build_query($calltouchParams);
 
 // Логируем URL для отладки (без чувствительных данных)
 error_log("[Calltouch Proxy] URL: " . $CALLTOUCH_API_URL);
@@ -87,12 +84,13 @@ error_log("[Calltouch Proxy] Site ID: " . $CALLTOUCH_SITE_ID);
 error_log("[Calltouch Proxy] Params: " . substr($postData, 0, 200));
 
 // Отправляем POST запрос в Calltouch API
+// Согласно документации: Content-type: application/x-www-form-urlencoded;charset=utf-8
 $ch = curl_init($CALLTOUCH_API_URL);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Content-Type: application/x-www-form-urlencoded',
+    'Content-Type: application/x-www-form-urlencoded;charset=utf-8',
     'User-Agent: RiverClub/1.0'
 ]);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);

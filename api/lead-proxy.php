@@ -25,13 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $WEBHOOK_URL_1C = 'https://cloud.1c.fitness/api/hs/lead/Webhook/9a93d939-e1e3-49b9-be61-0439957207f4';
 
 // Calltouch API настройки
+// ВАЖНО: API-токен для создания заявок НЕ ТРЕБУЕТСЯ согласно документации!
 $CALLTOUCH_SITE_ID = '52898';
-$CALLTOUCH_MOD_ID = 'r2kmsp7t';
-// Пробуем получить токен из переменной окружения, если не установлена - используем fallback
-$CALLTOUCH_API_TOKEN = getenv('VITE_CALLTOUCH_API_TOKEN') 
-    ?: getenv('CALLTOUCH_API_TOKEN') 
-    ?: '0b9ea4940475d676014768f9478f3b5062130d223af84';
-$CALLTOUCH_API_URL = "https://api.calltouch.ru/calls-service/RestAPI/{$CALLTOUCH_SITE_ID}/register-lead-dict";
+$CALLTOUCH_MOD_ID = 'r2kmsp7t'; // Используется только для получения sessionId из JS
+$CALLTOUCH_API_URL = "https://api.calltouch.ru/calls-service/RestAPI/requests/{$CALLTOUCH_SITE_ID}/register/";
 
 // Получаем тело запроса
 $data = file_get_contents('php://input');
