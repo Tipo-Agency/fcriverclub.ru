@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { X, Send, Phone, User, CheckCircle } from 'lucide-react';
 import { sendLeadTo1C, type LeadData } from '../../services/leadService';
 import { handlePhoneChange } from '../../utils/phoneMask';
@@ -13,11 +13,11 @@ interface FeedbackModalProps {
 }
 
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, subject = "Заявка в клуб" }) => {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,14 +46,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, s
     setIsSubmitting(false);
 
     if (result.success) {
-      setSuccess(true);
-      setName('');
-      setPhone('');
-      // Закрываем модалку через 3 секунды
-      setTimeout(() => {
-        setSuccess(false);
-        onClose();
-      }, 3000);
+      onClose(); // Закрываем модалку
+      // Редирект на страницу благодарности
+      navigate(`/thank-you?subject=${encodeURIComponent(subject)}`);
     } else {
       setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
     }

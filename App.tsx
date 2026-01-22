@@ -11,6 +11,7 @@ import Directions from './pages/Directions';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Oferta from './pages/Oferta';
 import Rules from './pages/Rules';
+import ThankYou from './pages/ThankYou';
 import { FeedbackProvider, useFeedback } from './contexts/FeedbackContext';
 import { FeedbackModal } from './components/ui/FeedbackModal';
 
@@ -39,6 +40,7 @@ const AppContent: React.FC = () => {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/oferta" element={<Oferta />} />
             <Route path="/rules" element={<Rules />} />
+            <Route path="/thank-you" element={<ThankYou />} />
           </Routes>
         </main>
         <Footer />

@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Star, Gift, Crown, Waves, CakeSlice, PartyPopper, ChevronRight, Baby, Trophy, Music, Sword, Heart, ArrowRight } from 'lucide-react';
 import { LuxuryButton } from '../components/ui/LuxuryButton';
@@ -9,11 +10,11 @@ import { sendLeadTo1C, type LeadData } from '../services/leadService';
 import { handlePhoneChange } from '../utils/phoneMask';
 
 const LeadFormKids: React.FC = () => {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,10 +43,8 @@ const LeadFormKids: React.FC = () => {
     setIsSubmitting(false);
 
     if (result.success) {
-      setSuccess(true);
-      setName('');
-      setPhone('');
-      setTimeout(() => setSuccess(false), 5000);
+      // Редирект на страницу благодарности
+      navigate('/thank-you?subject=' + encodeURIComponent('River Kids: Запись на визит'));
     } else {
       setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
     }
@@ -53,11 +52,6 @@ const LeadFormKids: React.FC = () => {
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-medium text-center">
-          ✓ Спасибо! Заявка отправлена. Мы свяжемся с вами в ближайшее время.
-        </div>
-      )}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm font-medium">
           {error}

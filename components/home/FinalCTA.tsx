@@ -1,18 +1,19 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { AlertCircle, ChevronRight, CheckCircle } from 'lucide-react';
+import { AlertCircle, ChevronRight } from 'lucide-react';
 import { useFeedback } from '../../contexts/FeedbackContext';
 import { sendLeadTo1C, type LeadData } from '../../services/leadService';
 import { handlePhoneChange } from '../../utils/phoneMask';
 
 export const FinalCTA: React.FC = () => {
   const { openModal } = useFeedback();
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,13 +42,8 @@ export const FinalCTA: React.FC = () => {
     setIsSubmitting(false);
 
     if (result.success) {
-      setSuccess(true);
-      setName('');
-      setPhone('');
-      // Скрываем успешное сообщение через 5 секунд
-      setTimeout(() => {
-        setSuccess(false);
-      }, 5000);
+      // Редирект на страницу благодарности
+      navigate('/thank-you?subject=' + encodeURIComponent('Индивидуальная презентация клуба'));
     } else {
       setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
     }
@@ -77,17 +73,6 @@ export const FinalCTA: React.FC = () => {
           </div>
 
           <form className="flex flex-col gap-4 max-w-2xl" onSubmit={handleSubmit}>
-            {success && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-green-500/20 border border-green-500/50 text-white px-6 py-4 rounded-2xl text-center"
-              >
-                <CheckCircle size={32} className="mx-auto mb-2 text-green-400" />
-                <h4 className="text-lg font-extrabold mb-1">Спасибо!</h4>
-                <p className="text-sm font-medium">Заявка отправлена. Мы свяжемся с вами в ближайшее время.</p>
-              </motion.div>
-            )}
             {error && (
               <div className="bg-red-500/20 border border-red-500/50 text-white px-4 py-3 rounded-2xl text-sm font-medium">
                 {error}
