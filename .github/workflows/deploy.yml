@@ -56,12 +56,36 @@ jobs:
           
           # Создаем директорию api на сервере перед копированием PHP файла
           echo "Creating /api directory on server..."
-          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "mkdir -p ${SERVER_PATH}/api"
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "
+            mkdir -p ${SERVER_PATH}/api || exit 1
+            echo '✅ Директория ${SERVER_PATH}/api создана или уже существует'
+            ls -la ${SERVER_PATH}/ | grep api || echo '⚠️  Директория api не найдена в списке'
+          " || { echo '❌ ОШИБКА: Не удалось создать директорию api!'; exit 1; }
+          
+          # Проверяем что директория существует перед копированием
+          echo "Verifying /api directory exists..."
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "
+            if [ ! -d ${SERVER_PATH}/api ]; then
+              echo '❌ ОШИБКА: Директория ${SERVER_PATH}/api не существует!'
+              exit 1
+            fi
+            echo '✅ Директория ${SERVER_PATH}/api существует'
+          " || { echo '❌ ОШИБКА: Директория api не найдена!'; exit 1; }
           
           # Копируем PHP прокси файлы на сервер
           echo "Copying PHP proxy files..."
-          scp -o StrictHostKeyChecking=no api/lead-proxy.php ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/api/lead-proxy.php
-          scp -o StrictHostKeyChecking=no api/calltouch-proxy.php ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/api/calltouch-proxy.php
+          if [ ! -f api/lead-proxy.php ]; then
+            echo '❌ ОШИБКА: Файл api/lead-proxy.php не найден локально!'
+            exit 1
+          fi
+          if [ ! -f api/calltouch-proxy.php ]; then
+            echo '❌ ОШИБКА: Файл api/calltouch-proxy.php не найден локально!'
+            exit 1
+          fi
+          
+          scp -o StrictHostKeyChecking=no api/lead-proxy.php ${SERVER_USER}@${SERVER_HOST}:"${SERVER_PATH}/api/lead-proxy.php" || { echo '❌ ОШИБКА: Не удалось скопировать lead-proxy.php'; exit 1; }
+          scp -o StrictHostKeyChecking=no api/calltouch-proxy.php ${SERVER_USER}@${SERVER_HOST}:"${SERVER_PATH}/api/calltouch-proxy.php" || { echo '❌ ОШИБКА: Не удалось скопировать calltouch-proxy.php'; exit 1; }
+          echo '✅ PHP файлы успешно скопированы'
           
           # Проверяем, что файлы скопировались и устанавливаем права
           echo "Verifying PHP files and setting permissions..."
