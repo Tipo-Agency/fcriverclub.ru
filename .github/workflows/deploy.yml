@@ -253,13 +253,15 @@ jobs:
               echo '⚠️ Warning: nginx может быть не перезапущен'
             fi
             
-            # ФИНАЛЬНАЯ ПРОВЕРКА: проверяем что calltouch-proxy location есть в конфиге
+            # ФИНАЛЬНАЯ ПРОВЕРКА: проверяем что calltouch-proxy location есть в ОСНОВНОМ конфиге
             echo '🔍 ФИНАЛЬНАЯ ПРОВЕРКА конфигурации:'
-            if sudo grep -q 'location.*calltouch-proxy' /etc/nginx/includes/api-proxy.conf 2>/dev/null; then
-              echo '✅ calltouch-proxy location найден в api-proxy.conf'
-              sudo grep -A 5 'location.*calltouch-proxy' /etc/nginx/includes/api-proxy.conf
+            if sudo grep -q 'location.*calltouch-proxy' \"\$NGINX_CONF\" 2>/dev/null; then
+              echo '✅ calltouch-proxy location найден в основном конфиге'
+              sudo grep -A 5 'location.*calltouch-proxy' \"\$NGINX_CONF\"
             else
-              echo '❌ ОШИБКА: calltouch-proxy location НЕ найден в api-proxy.conf!'
+              echo '❌ ОШИБКА: calltouch-proxy location НЕ найден в основном конфиге!'
+              echo 'Проверяем содержимое конфига:'
+              sudo cat \"\$NGINX_CONF\" | tail -50
               exit 1
             fi
             
@@ -284,14 +286,19 @@ jobs:
             fi
             
             # ФИНАЛЬНАЯ ПРОВЕРКА: тестируем что Nginx видит location блок
-            echo '🔍 ФИНАЛЬНАЯ ПРОВЕРКА конфигурации Nginx:'
-            if sudo nginx -T 2>/dev/null | grep -A 5 'location.*calltouch-proxy' > /dev/null; then
+            echo '🔍 ФИНАЛЬНАЯ ПРОВЕРКА: Nginx видит location блок?'
+            NGINX_TEST=\$(sudo nginx -T 2>&1)
+            if echo \"\$NGINX_TEST\" | grep -A 10 'location.*calltouch-proxy' > /dev/null; then
               echo '✅ Nginx видит location блок для calltouch-proxy'
-              sudo nginx -T 2>/dev/null | grep -A 5 'location.*calltouch-proxy'
+              echo \"\$NGINX_TEST\" | grep -A 10 'location.*calltouch-proxy'
             else
               echo '❌ ОШИБКА: Nginx НЕ видит location блок для calltouch-proxy!'
-              echo 'Проверяем все location блоки:'
-              sudo nginx -T 2>/dev/null | grep 'location' | head -20
+              echo 'Проверяем основной конфиг напрямую:'
+              sudo grep -n 'location.*calltouch-proxy' \"\$NGINX_CONF\" || echo 'Не найдено в конфиге'
+              echo 'Проверяем все location блоки в конфиге:'
+              sudo grep 'location' \"\$NGINX_CONF\" | head -10
+              echo 'Проверяем что файл существует:'
+              ls -la \"\$DOCUMENT_ROOT/api/calltouch-proxy.php\"
               exit 1
             fi
           " || echo "⚠️  Warning: nginx configuration step failed, but deployment continues"
