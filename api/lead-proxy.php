@@ -43,7 +43,9 @@ if (json_last_error() !== JSON_ERROR_NONE) {
     exit;
 }
 
-// Отправляем запрос к 1C
+// ВРЕМЕННО: Отключаем отправку в 1C для отладки Calltouch
+// TODO: Включить обратно после отладки Calltouch
+/*
 $ch = curl_init($WEBHOOK_URL_1C);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
@@ -63,14 +65,21 @@ if ($curlError1C) {
     echo json_encode(['error' => 'Failed to connect to 1C webhook']);
     exit;
 }
+*/
 
-// Если 1C успешно получил заявку, отправляем в Calltouch
+// ВРЕМЕННО: Имитируем успешный ответ от 1C
+$response1C = 'ok (temporarily disabled for Calltouch debugging)';
+$httpCode1C = 200;
+$curlError1C = null;
+
+// Отправляем в Calltouch (теперь всегда, не зависимо от 1C)
 $calltouchSuccess = false;
 $calltouchError = null;
 $calltouchResponse = null;
 $calltouchHttpCode = null;
 
-if ($httpCode1C >= 200 && $httpCode1C < 300) {
+// Отправляем в Calltouch
+{
     // Формируем данные для Calltouch
     $name = $payload['name'] ?? '';
     $lastName = $payload['last_name'] ?? '';
@@ -132,14 +141,17 @@ if ($httpCode1C >= 200 && $httpCode1C < 300) {
         'params' => $debugParams,
         'http_code' => $calltouchHttpCode,
         'response_length' => strlen($responseCalltouch),
-        'curl_error' => $curlErrorCalltouch
+        'curl_error' => $curlErrorCalltouch,
+        'full_response' => $responseCalltouch
     ];
 }
 
-http_response_code($httpCode1C);
+// ВРЕМЕННО: Всегда возвращаем успех для отладки Calltouch
+http_response_code(200);
 echo json_encode([
-    'success' => $httpCode1C >= 200 && $httpCode1C < 300,
+    'success' => true,
     'data' => $response1C,
+    'note' => '1C temporarily disabled for Calltouch debugging',
     'calltouch' => [
         'sent' => $calltouchSuccess,
         'http_code' => $calltouchHttpCode,
