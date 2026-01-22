@@ -57,19 +57,21 @@ jobs:
           echo "Creating /api directory on server..."
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "mkdir -p ${SERVER_PATH}/api"
           
-          # Копируем PHP прокси файл на сервер
-          echo "Copying PHP proxy file..."
+          # Копируем PHP прокси файлы на сервер
+          echo "Copying PHP proxy files..."
           scp -o StrictHostKeyChecking=no api/lead-proxy.php ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/api/lead-proxy.php
+          scp -o StrictHostKeyChecking=no api/calltouch-proxy.php ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/api/calltouch-proxy.php
           
-          # Проверяем, что файл скопировался и устанавливаем права
-          echo "Verifying PHP file and setting permissions..."
+          # Проверяем, что файлы скопировались и устанавливаем права
+          echo "Verifying PHP files and setting permissions..."
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "
-            if [ -f ${SERVER_PATH}/api/lead-proxy.php ]; then
+            if [ -f ${SERVER_PATH}/api/lead-proxy.php ] && [ -f ${SERVER_PATH}/api/calltouch-proxy.php ]; then
               chmod 644 ${SERVER_PATH}/api/lead-proxy.php
-              echo '✅ PHP файл успешно скопирован: '${SERVER_PATH}/api/lead-proxy.php
-              ls -la ${SERVER_PATH}/api/lead-proxy.php
+              chmod 644 ${SERVER_PATH}/api/calltouch-proxy.php
+              echo '✅ PHP файлы успешно скопированы'
+              ls -la ${SERVER_PATH}/api/*.php
             else
-              echo '❌ ОШИБКА: PHP файл не найден после копирования!'
+              echo '❌ ОШИБКА: PHP файлы не найдены после копирования!'
               exit 1
             fi
           "
@@ -106,6 +108,8 @@ jobs:
             sudo sed \"s|root /var/www/fcriverclub.ru;|root \$DOCUMENT_ROOT;|g; s|fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;|fastcgi_pass \$PHP_SOCKET;|g\" /tmp/nginx-api-proxy.conf > /tmp/api-proxy-custom.conf
             sudo cp /tmp/api-proxy-custom.conf /etc/nginx/includes/api-proxy.conf
             echo '✅ Конфигурация создана с правильными путями'
+            echo '📋 Проверка конфигурации:'
+            sudo grep -A 5 'location.*calltouch-proxy' /etc/nginx/includes/api-proxy.conf || echo '⚠️  calltouch-proxy location не найден'
             
             # Ищем активный конфиг nginx
             NGINX_CONF=\$(ls /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1)

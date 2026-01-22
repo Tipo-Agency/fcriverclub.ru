@@ -33,6 +33,12 @@ export default defineConfig(({ mode }) => {
             rewrite: (path) => path.replace(/^\/api\/schedule/, '/classes'),
             secure: false,
           },
+          // Проксирование для Calltouch (в dev режиме будет работать через PHP на сервере)
+          '/api/calltouch-proxy': {
+            target: 'http://localhost',
+            changeOrigin: true,
+            secure: false,
+          },
         },
       },
       plugins: [react()],

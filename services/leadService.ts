@@ -172,8 +172,27 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
       }
     }
     
-    // Отправка в Calltouch API теперь происходит на сервере через PHP прокси (api/lead-proxy.php)
-    // Это решает проблему CORS, так как запросы с клиента блокируются политикой безопасности браузера
+    // Отправка в Calltouch API через отдельный endpoint
+    try {
+      const calltouchResponse = await fetch('/api/calltouch-proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      const calltouchResult = await calltouchResponse.json().catch(() => ({}));
+      console.log('[LeadService] 📞 Calltouch результат:', calltouchResult);
+      
+      if (calltouchResult.success) {
+        console.log('[LeadService] ✅ Calltouch: заявка успешно отправлена');
+      } else {
+        console.error('[LeadService] ❌ Calltouch: ошибка отправки', calltouchResult);
+      }
+    } catch (error) {
+      console.warn('[LeadService] ⚠️ Ошибка отправки в Calltouch (не критично):', error);
+    }
     
     // Отправляем событие в Calltouch (клиентское)
     if (typeof window !== 'undefined' && (window as any).ct) {
