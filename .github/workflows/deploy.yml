@@ -66,7 +66,15 @@ jobs:
             # Проверяем что sudo работает без пароля
             if ! sudo -n true 2>/dev/null; then
               echo '❌ ОШИБКА: sudo требует пароль!'
-              echo 'Проверь что файл /etc/sudoers.d/deploy существует и содержит правильные команды.'
+              echo ''
+              echo 'Проблема: пути к командам в /etc/sudoers.d/deploy не совпадают с реальными путями.'
+              echo 'Проверь реальные пути: which nginx systemctl sed'
+              echo ''
+              echo 'Исправь файл /etc/sudoers.d/deploy:'
+              echo '  deploy ALL=(ALL) NOPASSWD: /usr/sbin/nginx, /usr/bin/systemctl, /usr/sbin/service, /usr/bin/sed, /bin/cp, /bin/mv, /bin/mkdir, /usr/bin/awk'
+              echo ''
+              echo 'Также удали проблемные файлы:'
+              echo '  sudo rm /etc/sudoers.d/USERNAME /etc/sudoers.d/deployE'
               exit 1
             fi
             
