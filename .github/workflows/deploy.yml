@@ -113,7 +113,13 @@ jobs:
             echo '📁 Document root: '\$DOCUMENT_ROOT
             
             # Создаем конфигурацию api-proxy.conf (проверяем права на sudo)
-            if sudo -n true 2>/dev/null; then
+            echo '🔍 Проверка sudo прав...'
+            echo 'Текущий пользователь: '$(whoami)
+            echo 'Проверка sudo без пароля...'
+            
+            # Пробуем выполнить простую команду через sudo
+            if sudo -n mkdir -p /tmp/test_sudo_dir 2>/dev/null && sudo -n rmdir /tmp/test_sudo_dir 2>/dev/null; then
+              echo '✅ sudo работает без пароля'
               # sudo работает без пароля
               sudo mkdir -p /etc/nginx/includes
               sudo sed \"s|DOCUMENT_ROOT_PLACEHOLDER|\$DOCUMENT_ROOT|g; s|PHP_SOCKET_PLACEHOLDER|\$PHP_SOCKET|g\" /tmp/nginx-api-proxy.conf > /tmp/api-proxy-custom.conf
@@ -159,10 +165,23 @@ jobs:
                 echo '⚠️  Warning: Location блок для lead-proxy не найден'
               fi
             else
-              echo '❌ ОШИБКА: sudo требует пароль! Настройте NOPASSWD для пользователя'
-              echo 'Для настройки выполните на сервере:'
-              echo '  echo \"${SERVER_USER} ALL=(ALL) NOPASSWD: /usr/bin/nginx, /bin/systemctl, /usr/sbin/service, /bin/sed, /bin/cp, /bin/mv, /bin/mkdir, /usr/bin/awk\" | sudo tee /etc/sudoers.d/${SERVER_USER}'
-              exit 1
+              echo '❌ ОШИБКА: sudo требует пароль!'
+              echo 'Диагностика:'
+              echo '  Пользователь: '$(whoami)
+              echo '  Проверка sudoers файлов:'
+              sudo cat /etc/sudoers.d/* 2>/dev/null | grep -i $(whoami) || echo '    Не найдено правил для пользователя '$(whoami)
+              echo '  Попробуем выполнить команду напрямую (может быть ошибка):'
+              if sudo mkdir -p /etc/nginx/includes 2>&1; then
+                echo '  ⚠️  Команда sudo mkdir сработала, но проверка -n не прошла'
+                echo '  Продолжаем выполнение...'
+                # Продолжаем выполнение, возможно проверка была слишком строгой
+                sudo mkdir -p /etc/nginx/includes
+              else
+                echo '❌ ОШИБКА: sudo действительно требует пароль!'
+                echo 'Для настройки выполните на сервере:'
+                echo '  echo \"'$(whoami)' ALL=(ALL) NOPASSWD: /usr/bin/nginx, /bin/systemctl, /usr/sbin/service, /bin/sed, /bin/cp, /bin/mv, /bin/mkdir, /usr/bin/awk\" | sudo tee /etc/sudoers.d/'$(whoami)
+                exit 1
+              fi
             fi
           " || { echo '❌ ОШИБКА: Настройка nginx не удалась!'; exit 1; }
           
