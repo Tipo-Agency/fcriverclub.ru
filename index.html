@@ -109,60 +109,19 @@
       }
       ::-webkit-scrollbar-thumb:hover { background: var(--river-primary); }
 
-      /* Фиксация виджетов внизу слева на мобильных устройствах */
+      /* Перемещение виджетов вниз слева на мобильных */
       @media (max-width: 768px) {
-        /* GetReview виджет - фиксируем внизу слева, сохраняя оригинальный формат */
-        [id*="getreview"], 
+        [id*="getreview"],
         [id*="GetReview"],
         [class*="getreview"],
         [class*="GetReview"],
-        iframe[src*="getreview"],
-        iframe[src*="GetReview"],
-        div[id*="gr-widget"],
-        div[class*="gr-widget"],
-        button[id*="getreview"],
-        button[class*="getreview"],
-        a[id*="getreview"],
-        a[class*="getreview"] {
-          position: fixed !important;
-          bottom: 20px !important;
-          left: 20px !important;
-          top: auto !important;
-          right: auto !important;
-          z-index: 9999 !important;
-          transform: none !important;
-        }
-        
-        /* Marquiz виджет - фиксируем внизу слева, сохраняя оригинальный формат */
         [id*="marquiz"],
         [id*="Marquiz"],
         [class*="marquiz"],
-        [class*="Marquiz"],
-        iframe[src*="marquiz"],
-        iframe[src*="Marquiz"] {
-          position: fixed !important;
+        [class*="Marquiz"] {
           bottom: 20px !important;
           left: 20px !important;
           top: auto !important;
-          right: auto !important;
-          z-index: 9999 !important;
-          transform: none !important;
-        }
-        
-        /* Универсальное правило для любых фиксированных виджетов вверху - перемещаем вниз слева */
-        [style*="position: fixed"][style*="top"],
-        [style*="position:fixed"][style*="top"] {
-          top: auto !important;
-          bottom: 20px !important;
-        }
-        
-        [style*="position: fixed"][style*="right"],
-        [style*="position:fixed"][style*="right"],
-        [style*="position: fixed"][style*="left: 0"],
-        [style*="position:fixed"][style*="left:0"],
-        [style*="position: fixed"][style*="left:0px"],
-        [style*="position:fixed"][style*="left:0px"] {
-          left: 20px !important;
           right: auto !important;
         }
       }
