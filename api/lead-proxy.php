@@ -124,16 +124,38 @@ if ($curlErrorCalltouch) {
     $calltouchError = "HTTP {$calltouchHttpCode}: " . substr($responseCalltouch, 0, 200);
 }
 
-// Возвращаем результат
+// Логируем для отладки
+error_log("[Lead Proxy] 1C response: " . substr($response1C, 0, 200));
+error_log("[Lead Proxy] 1C HTTP code: " . $httpCode1C);
+error_log("[Lead Proxy] Calltouch success: " . ($calltouchSuccess ? 'yes' : 'no'));
+error_log("[Lead Proxy] Calltouch HTTP code: " . $calltouchHttpCode);
+error_log("[Lead Proxy] Calltouch error: " . ($calltouchError ?? 'none'));
+error_log("[Lead Proxy] Calltouch response: " . substr($calltouchResponse ?? '', 0, 200));
+
+// Возвращаем результат ВСЕГДА в формате JSON
 http_response_code(200);
-echo json_encode([
+header('Content-Type: application/json; charset=utf-8');
+$result = json_encode([
     'success' => $httpCode1C >= 200 && $httpCode1C < 300,
-    'data' => $response1C,
+    'data' => $response1C ? substr($response1C, 0, 500) : 'ok',
+    '1c_http_code' => $httpCode1C,
     'calltouch' => [
         'sent' => $calltouchSuccess,
         'http_code' => $calltouchHttpCode,
         'error' => $calltouchError,
-        'response' => $calltouchResponse ? substr($calltouchResponse, 0, 500) : null
+        'response' => $calltouchResponse ? substr($calltouchResponse, 0, 500) : null,
+        'debug' => [
+            'url' => $CALLTOUCH_API_URL,
+            'post_data_length' => strlen($postData),
+            'curl_error' => $curlErrorCalltouch ?: null
+        ]
     ]
-], JSON_UNESCAPED_UNICODE);
+], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+if ($result === false) {
+    error_log("[Lead Proxy] JSON encode error: " . json_last_error_msg());
+    $result = json_encode(['error' => 'JSON encoding failed', 'json_error' => json_last_error_msg()]);
+}
+
+echo $result;
 ?>
