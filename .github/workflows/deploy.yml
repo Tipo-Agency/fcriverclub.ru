@@ -117,15 +117,16 @@ jobs:
             
             # Проверяем, какие правила sudo есть для пользователя деплоя
             echo 'Проверка правил sudoers для ${SERVER_USER}:'
-            if [ -f /etc/sudoers.d/${SERVER_USER} ]; then
+            if sudo test -f /etc/sudoers.d/${SERVER_USER} 2>/dev/null; then
               echo '✅ Файл /etc/sudoers.d/${SERVER_USER} существует:'
-              cat /etc/sudoers.d/${SERVER_USER} || echo '  ⚠️  Не удалось прочитать файл'
+              sudo cat /etc/sudoers.d/${SERVER_USER} 2>/dev/null || echo '  ⚠️  Не удалось прочитать файл'
             else
               echo '❌ Файл /etc/sudoers.d/${SERVER_USER} НЕ найден!'
             fi
             
-            # Пробуем выполнить простую команду через sudo
+            # Пробуем выполнить простую команду через sudo (проверяем NOPASSWD)
             echo 'Проверка sudo без пароля...'
+            # Пробуем несколько команд, которые нам нужны
             if sudo -n mkdir -p /tmp/test_sudo_dir 2>/dev/null && sudo -n rmdir /tmp/test_sudo_dir 2>/dev/null; then
               echo '✅ sudo работает без пароля для пользователя деплоя'
               # sudo работает без пароля
@@ -218,13 +219,24 @@ jobs:
             else
               echo '❌ ОШИБКА: sudo требует пароль для пользователя ${SERVER_USER}!'
               echo ''
+              echo 'Диагностика:'
+              echo '  Текущий пользователь: '$(whoami)
+              echo '  Проверка файла sudoers:'
+              if sudo test -f /etc/sudoers.d/${SERVER_USER} 2>/dev/null; then
+                echo '    Файл существует, содержимое:'
+                sudo cat /etc/sudoers.d/${SERVER_USER} 2>/dev/null | sed 's/^/      /' || echo '      Не удалось прочитать'
+                echo '    Права на файл:'
+                sudo ls -la /etc/sudoers.d/${SERVER_USER} 2>/dev/null || echo '      Не удалось проверить'
+              else
+                echo '    Файл НЕ существует!'
+              fi
+              echo ''
               echo 'Для настройки NOPASSWD выполните на сервере под root:'
               echo '  echo \"${SERVER_USER} ALL=(ALL) NOPASSWD: /usr/bin/nginx, /bin/systemctl, /usr/sbin/service, /bin/sed, /bin/cp, /bin/mv, /bin/mkdir, /usr/bin/awk\" | sudo tee /etc/sudoers.d/${SERVER_USER}'
               echo '  sudo chmod 0440 /etc/sudoers.d/${SERVER_USER}'
               echo '  sudo visudo -c'
               echo ''
-              echo 'После настройки проверьте:'
-              echo '  sudo -u ${SERVER_USER} sudo -n mkdir -p /tmp/test && echo \"✅ Работает\" || echo \"❌ Не работает\"'
+              echo 'ВАЖНО: Убедитесь что в файле указан правильный пользователь (${SERVER_USER}), а не USERNAME или другой!'
               exit 1
             fi
           " || { echo '❌ ОШИБКА: Настройка nginx не удалась!'; exit 1; }
