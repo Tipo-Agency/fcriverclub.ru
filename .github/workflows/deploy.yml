@@ -228,7 +228,7 @@ jobs:
               echo '   deploy ALL=(ALL) NOPASSWD: /usr/bin/nginx, /bin/systemctl, /usr/sbin/service, /bin/sed, /bin/cp, /bin/mv, /bin/mkdir, /usr/bin/awk'
               echo ''
               echo '3. Выполни команды:'
-              echo '   echo "deploy ALL=(ALL) NOPASSWD: /usr/bin/nginx, /bin/systemctl, /usr/sbin/service, /bin/sed, /bin/cp, /bin/mv, /bin/mkdir, /usr/bin/awk" | sudo tee /etc/sudoers.d/deploy'
+              echo '   echo \"deploy ALL=(ALL) NOPASSWD: /usr/bin/nginx, /bin/systemctl, /usr/sbin/service, /bin/sed, /bin/cp, /bin/mv, /bin/mkdir, /usr/bin/awk\" | sudo tee /etc/sudoers.d/deploy'
               echo '   sudo chmod 0440 /etc/sudoers.d/deploy'
               echo '   sudo visudo -c'
               echo ''
