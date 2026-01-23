@@ -45,88 +45,18 @@ jobs:
           echo "Cleaning old files on server..."
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "cd ${SERVER_PATH} && rm -rf * .[^.]* 2>/dev/null || true"
           
-          # Копируем конфигурацию nginx
-          echo "Copying nginx config..."
-          scp -o StrictHostKeyChecking=no nginx-api-proxy.conf ${SERVER_USER}@${SERVER_HOST}:/tmp/nginx-api-proxy.conf
-          
-          # Создаем директорию api и копируем PHP файл
+          # Копируем PHP файл для Calltouch
           echo "Copying PHP files..."
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "mkdir -p ${SERVER_PATH}/api"
           scp -o StrictHostKeyChecking=no api/lead-proxy.php ${SERVER_USER}@${SERVER_HOST}:"${SERVER_PATH}/api/lead-proxy.php"
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "chmod 644 ${SERVER_PATH}/api/lead-proxy.php"
           echo '✅ PHP файлы скопированы'
           
-          # Копируем собранные файлы
+          # Копируем собранные файлы сайта
           echo "Copying built files..."
           scp -o StrictHostKeyChecking=no -r dist/* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/
           
-          # Настраиваем nginx
-          echo "Configuring nginx..."
-          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "
-            # Проверяем что sudo работает без пароля
-            if ! sudo -n true 2>/dev/null; then
-              echo '❌ ОШИБКА: sudo требует пароль!'
-              echo ''
-              echo 'Проблема: пути к командам в /etc/sudoers.d/deploy не совпадают с реальными путями.'
-              echo 'Проверь реальные пути: which nginx systemctl sed'
-              echo ''
-              echo 'Исправь файл /etc/sudoers.d/deploy:'
-              echo '  deploy ALL=(ALL) NOPASSWD: /usr/sbin/nginx, /usr/bin/systemctl, /usr/sbin/service, /usr/bin/sed, /bin/cp, /bin/mv, /bin/mkdir, /usr/bin/awk'
-              echo ''
-              echo 'Также удали проблемные файлы:'
-              echo '  sudo rm /etc/sudoers.d/USERNAME /etc/sudoers.d/deployE'
-              exit 1
-            fi
-            
-            set -e
-            
-            # Ищем PHP-FPM socket
-            PHP_SOCKET='127.0.0.1:9000'
-            for sock in /var/run/php/php*-fpm.sock /var/run/php-fpm/php-fpm.sock; do
-              if [ -S \"\$sock\" ] 2>/dev/null; then
-                PHP_SOCKET=\"\$sock\"
-                break
-              fi
-            done
-            
-            # Определяем document_root
-            DOCUMENT_ROOT=\$(grep -E '^\s*root\s+' /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1 | awk '{print \$2}' | tr -d ';' || echo '${SERVER_PATH}')
-            [ -z \"\$DOCUMENT_ROOT\" ] && DOCUMENT_ROOT='${SERVER_PATH}'
-            
-            # Создаем конфигурацию api-proxy.conf
-            sudo mkdir -p /etc/nginx/includes
-            
-            # Удаляем старый файл если содержит proxy_pass на 1C
-            if [ -f /etc/nginx/includes/api-proxy.conf ]; then
-              if sudo grep -q 'proxy_pass.*cloud\.1c\.fitness' /etc/nginx/includes/api-proxy.conf 2>/dev/null; then
-                sudo rm /etc/nginx/includes/api-proxy.conf
-              fi
-            fi
-            
-            # Создаем новый файл
-            sudo sed \"s|DOCUMENT_ROOT_PLACEHOLDER|\$DOCUMENT_ROOT|g; s|PHP_SOCKET_PLACEHOLDER|\$PHP_SOCKET|g\" /tmp/nginx-api-proxy.conf > /tmp/api-proxy-custom.conf
-            sudo cp /tmp/api-proxy-custom.conf /etc/nginx/includes/api-proxy.conf
-            
-            # Находим основной конфиг nginx
-            NGINX_CONF=\$(ls /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1)
-            [ -z \"\$NGINX_CONF\" ] && NGINX_CONF=\"/etc/nginx/sites-available/default\"
-            
-            # Удаляем старые location блоки
-            sudo sed -i '/location[[:space:]]*[=]*[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
-            sudo sed -i '/proxy_pass.*cloud\.1c\.fitness.*lead.*Webhook/d' \"\$NGINX_CONF\" 2>/dev/null || true
-            
-            # Добавляем include если его нет
-            if ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
-              if grep -q 'location[[:space:]]*/' \"\$NGINX_CONF\" 2>/dev/null; then
-                sudo sed -i '/location[[:space:]]*\//i\    include /etc/nginx/includes/api-proxy.conf;' \"\$NGINX_CONF\"
-              else
-                sudo awk '/^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/ {if (/^[[:space:]]*}/ && !added) {print \"    include /etc/nginx/includes/api-proxy.conf;\"; added=1} print}' \"\$NGINX_CONF\" > \"\$NGINX_CONF.tmp\" && sudo mv \"\$NGINX_CONF.tmp\" \"\$NGINX_CONF\"
-              fi
-            fi
-            
-            # Проверяем и перезагружаем nginx
-            sudo nginx -t || exit 1
-            sudo systemctl restart nginx 2>/dev/null || sudo service nginx restart 2>/dev/null || sudo nginx -s reload
-          " || { echo '❌ ОШИБКА: Настройка nginx не удалась! Проверь что sudo работает без пароля для пользователя deploy.'; exit 1; }
-          
           echo "✅ Deployment completed successfully!"
+          echo ""
+          echo "⚠️  ВАЖНО: Убедись что nginx настроен для работы с /api/lead-proxy"
+          echo "   Файл nginx-api-proxy.conf должен быть применен вручную на сервере"
