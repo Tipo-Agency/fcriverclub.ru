@@ -45,18 +45,12 @@ jobs:
           echo "Cleaning old files on server..."
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "cd ${SERVER_PATH} && rm -rf * .[^.]* 2>/dev/null || true"
           
-          # Копируем PHP файл для Calltouch
-          echo "Copying PHP files..."
-          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "mkdir -p ${SERVER_PATH}/api"
-          scp -o StrictHostKeyChecking=no api/lead-proxy.php ${SERVER_USER}@${SERVER_HOST}:"${SERVER_PATH}/api/lead-proxy.php"
-          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "chmod 644 ${SERVER_PATH}/api/lead-proxy.php"
-          echo '✅ PHP файлы скопированы'
-          
           # Копируем собранные файлы сайта
           echo "Copying built files..."
           scp -o StrictHostKeyChecking=no -r dist/* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/
           
+          # Проверяем что index.html скопировался
+          echo "Verifying deployment..."
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "ls -la ${SERVER_PATH}/index.html || echo '⚠️  index.html не найден!'"
+          
           echo "✅ Deployment completed successfully!"
-          echo ""
-          echo "⚠️  ВАЖНО: Убедись что nginx настроен для работы с /api/lead-proxy"
-          echo "   Файл nginx-api-proxy.conf должен быть применен вручную на сервере"
