@@ -75,25 +75,27 @@ jobs:
           echo "Copying built files to server..."
           scp -o StrictHostKeyChecking=no -r dist/* ${SERVER_USER}@${SERVER_HOST}:${SERVER_PATH}/
           
-          # Настраиваем nginx
+          # Настраиваем nginx (используем sudo без пароля через NOPASSWD или через пользователя с правами)
           echo "Configuring nginx..."
-          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "
-            # Ищем PHP-FPM socket (пробуем разные варианты)
+          ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} bash << 'NGINX_SETUP'
+            set -e
+            
+            # Ищем PHP-FPM socket
             PHP_SOCKET=''
             for sock in /var/run/php/php*-fpm.sock /var/run/php-fpm/php-fpm.sock; do
-              if [ -S \"\$sock\" ] 2>/dev/null; then
-                PHP_SOCKET=\"\$sock\"
+              if [ -S "$sock" ] 2>/dev/null; then
+                PHP_SOCKET="$sock"
                 break
               fi
             done
             
             # Если socket не найден, пробуем через systemctl
-            if [ -z \"\$PHP_SOCKET\" ]; then
-              PHP_SERVICE=\$(systemctl list-units --type=service | grep -o 'php[0-9.]*-fpm' | head -1)
-              if [ -n \"\$PHP_SERVICE\" ]; then
-                PHP_VERSION=\$(echo \"\$PHP_SERVICE\" | grep -oE '[0-9.]+')
-                PHP_SOCKET=\"/var/run/php/php\${PHP_VERSION}-fpm.sock\"
-                if [ ! -S \"\$PHP_SOCKET\" ]; then
+            if [ -z "$PHP_SOCKET" ]; then
+              PHP_SERVICE=$(systemctl list-units --type=service 2>/dev/null | grep -o 'php[0-9.]*-fpm' | head -1 || true)
+              if [ -n "$PHP_SERVICE" ]; then
+                PHP_VERSION=$(echo "$PHP_SERVICE" | grep -oE '[0-9.]+')
+                PHP_SOCKET="/var/run/php/php${PHP_VERSION}-fpm.sock"
+                if [ ! -S "$PHP_SOCKET" ]; then
                   PHP_SOCKET='127.0.0.1:9000'
                 fi
               else
@@ -101,59 +103,67 @@ jobs:
               fi
             fi
             
-            echo '✅ PHP-FPM socket: '\$PHP_SOCKET
+            echo "✅ PHP-FPM socket: $PHP_SOCKET"
             
             # Определяем document_root
-            DOCUMENT_ROOT=\$(grep -E '^\s*root\s+' /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1 | awk '{print \$2}' | tr -d ';' || echo '${SERVER_PATH}')
-            if [ -z \"\$DOCUMENT_ROOT\" ] || [ \"\$DOCUMENT_ROOT\" = \"${SERVER_PATH}\" ]; then
+            DOCUMENT_ROOT=$(grep -E '^\s*root\s+' /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1 | awk '{print $2}' | tr -d ';' || echo '${SERVER_PATH}')
+            if [ -z "$DOCUMENT_ROOT" ] || [ "$DOCUMENT_ROOT" = "${SERVER_PATH}" ]; then
               DOCUMENT_ROOT='${SERVER_PATH}'
             fi
-            echo '📁 Document root: '\$DOCUMENT_ROOT
+            echo "📁 Document root: $DOCUMENT_ROOT"
             
-            # Создаем конфигурацию api-proxy.conf
-            sudo mkdir -p /etc/nginx/includes
-            sudo sed \"s|DOCUMENT_ROOT_PLACEHOLDER|\$DOCUMENT_ROOT|g; s|PHP_SOCKET_PLACEHOLDER|\$PHP_SOCKET|g\" /tmp/nginx-api-proxy.conf > /tmp/api-proxy-custom.conf
-            sudo cp /tmp/api-proxy-custom.conf /etc/nginx/includes/api-proxy.conf
-            echo '✅ Конфигурация api-proxy.conf создана'
-            
-            # Находим основной конфиг nginx
-            NGINX_CONF=\$(ls /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1)
-            if [ -z \"\$NGINX_CONF\" ]; then
-              NGINX_CONF=\"/etc/nginx/sites-available/default\"
-            fi
-            echo '📄 Nginx config: '\$NGINX_CONF
-            
-            # Удаляем старые location блоки для /api/lead-proxy
-            sudo sed -i '/location[[:space:]]*[=]*[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
-            
-            # Добавляем include для api-proxy.conf ПЕРЕД location /
-            if ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
-              if grep -q 'location[[:space:]]*/' \"\$NGINX_CONF\" 2>/dev/null; then
-                sudo sed -i '/location[[:space:]]*\//i\    include /etc/nginx/includes/api-proxy.conf;' \"\$NGINX_CONF\"
-              else
-                sudo awk '/^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/ {if (/^[[:space:]]*}/ && !added) {print \"    include /etc/nginx/includes/api-proxy.conf;\"; added=1} print}' \"\$NGINX_CONF\" > \"\$NGINX_CONF.tmp\" && sudo mv \"\$NGINX_CONF.tmp\" \"\$NGINX_CONF\"
+            # Создаем конфигурацию api-proxy.conf (проверяем права на sudo)
+            if sudo -n true 2>/dev/null; then
+              # sudo работает без пароля
+              sudo mkdir -p /etc/nginx/includes
+              sudo sed "s|DOCUMENT_ROOT_PLACEHOLDER|$DOCUMENT_ROOT|g; s|PHP_SOCKET_PLACEHOLDER|$PHP_SOCKET|g" /tmp/nginx-api-proxy.conf > /tmp/api-proxy-custom.conf
+              sudo cp /tmp/api-proxy-custom.conf /etc/nginx/includes/api-proxy.conf
+              echo '✅ Конфигурация api-proxy.conf создана'
+              
+              # Находим основной конфиг nginx
+              NGINX_CONF=$(ls /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1)
+              if [ -z "$NGINX_CONF" ]; then
+                NGINX_CONF="/etc/nginx/sites-available/default"
               fi
-              echo '✅ Include для api-proxy.conf добавлен'
-            fi
-            
-            # Проверяем конфигурацию
-            if ! sudo nginx -t; then
-              echo '❌ ОШИБКА: Конфигурация nginx невалидна!'
-              sudo nginx -t
+              echo "📄 Nginx config: $NGINX_CONF"
+              
+              # Удаляем старые location блоки для /api/lead-proxy
+              sudo sed -i '/location[[:space:]]*[=]*[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' "$NGINX_CONF" 2>/dev/null || true
+              
+              # Добавляем include для api-proxy.conf ПЕРЕД location /
+              if ! grep -q 'include.*api-proxy.conf' "$NGINX_CONF" 2>/dev/null; then
+                if grep -q 'location[[:space:]]*/' "$NGINX_CONF" 2>/dev/null; then
+                  sudo sed -i '/location[[:space:]]*\//i\    include /etc/nginx/includes/api-proxy.conf;' "$NGINX_CONF"
+                else
+                  sudo awk '/^[[:space:]]*server[[:space:]]*{/,/^[[:space:]]*}/ {if (/^[[:space:]]*}/ && !added) {print "    include /etc/nginx/includes/api-proxy.conf;"; added=1} print}' "$NGINX_CONF" > "$NGINX_CONF.tmp" && sudo mv "$NGINX_CONF.tmp" "$NGINX_CONF"
+                fi
+                echo '✅ Include для api-proxy.conf добавлен'
+              fi
+              
+              # Проверяем конфигурацию
+              if ! sudo nginx -t; then
+                echo '❌ ОШИБКА: Конфигурация nginx невалидна!'
+                sudo nginx -t
+                exit 1
+              fi
+              
+              # Перезагружаем nginx
+              echo '🔄 Перезагрузка nginx...'
+              sudo systemctl restart nginx 2>/dev/null || sudo service nginx restart 2>/dev/null || sudo nginx -s reload
+              sleep 1
+              
+              # Финальная проверка
+              if sudo nginx -T 2>&1 | grep -q 'location.*lead-proxy'; then
+                echo '✅ Location блок для lead-proxy найден в конфигурации nginx'
+              else
+                echo '⚠️  Warning: Location блок для lead-proxy не найден'
+              fi
+            else
+              echo '❌ ОШИБКА: sudo требует пароль! Настройте NOPASSWD для пользователя или используйте root'
+              echo 'Для настройки выполните на сервере:'
+              echo '  echo "${SERVER_USER} ALL=(ALL) NOPASSWD: /usr/bin/nginx, /bin/systemctl, /usr/sbin/service, /bin/sed, /bin/cp, /bin/mv, /bin/mkdir, /usr/bin/awk" | sudo tee /etc/sudoers.d/${SERVER_USER}'
               exit 1
             fi
-            
-            # Перезагружаем nginx
-            echo '🔄 Перезагрузка nginx...'
-            sudo systemctl restart nginx 2>/dev/null || sudo service nginx restart 2>/dev/null || sudo nginx -s reload
-            sleep 1
-            
-            # Финальная проверка
-            if sudo nginx -T 2>&1 | grep -q 'location.*lead-proxy'; then
-              echo '✅ Location блок для lead-proxy найден в конфигурации nginx'
-            else
-              echo '⚠️  Warning: Location блок для lead-proxy не найден'
-            fi
-          " || { echo '❌ ОШИБКА: Настройка nginx не удалась!'; exit 1; }
+NGINX_SETUP
           
           echo "✅ Deployment completed successfully!"
