@@ -63,6 +63,13 @@ jobs:
           # Настраиваем nginx
           echo "Configuring nginx..."
           ssh -o StrictHostKeyChecking=no ${SERVER_USER}@${SERVER_HOST} "
+            # Проверяем что sudo работает без пароля
+            if ! sudo -n true 2>/dev/null; then
+              echo '❌ ОШИБКА: sudo требует пароль!'
+              echo 'Проверь что файл /etc/sudoers.d/deploy существует и содержит правильные команды.'
+              exit 1
+            fi
+            
             set -e
             
             # Ищем PHP-FPM socket
