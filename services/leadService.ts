@@ -77,7 +77,61 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
       }
     }
     
-    // Формируем данные для отправки в 1C (Calltouch тоже получит эти данные)
+    // Отправляем в Calltouch напрямую с клиента (как в документации)
+    const calltouchSiteId = '52898';
+    const calltouchModId = 'r2kmsp7t';
+    
+    // Получаем sessionId из Calltouch скрипта
+    let calltouchSessionId = undefined;
+    if (typeof window !== 'undefined' && (window as any).ct) {
+      try {
+        const ctParams = (window as any).ct('calltracking_params', calltouchModId);
+        calltouchSessionId = ctParams?.sessionId;
+      } catch (e) {
+        console.warn('[LeadService] Не удалось получить sessionId из Calltouch:', e);
+      }
+    }
+    
+    // Формируем данные для Calltouch (согласно документации)
+    const calltouchData = new URLSearchParams();
+    calltouchData.append('fio', `${firstName} ${lastName}`.trim() || firstName);
+    calltouchData.append('phoneNumber', normalizedPhone);
+    calltouchData.append('email', data.email || '');
+    calltouchData.append('subject', data.subject || 'Заявка с сайта fcriverclub.ru');
+    calltouchData.append('comment', data.comment || (data.subject ? `Тема заявки: ${data.subject}` : 'Новая заявка с сайта'));
+    calltouchData.append('targetRequest', 'true');
+    if (calltouchSessionId) {
+      calltouchData.append('sessionId', calltouchSessionId);
+    }
+    if (typeof window !== 'undefined') {
+      calltouchData.append('requestUrl', window.location.href);
+    }
+    
+    // Отправляем в Calltouch напрямую
+    let calltouchSuccess = false;
+    try {
+      const calltouchResponse = await fetch(`https://api.calltouch.ru/calls-service/RestAPI/requests/${calltouchSiteId}/register/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+        },
+        body: calltouchData.toString(),
+      });
+      
+      if (calltouchResponse.ok) {
+        calltouchSuccess = true;
+        const calltouchResult = await calltouchResponse.json().catch(() => null);
+        console.log('[LeadService] ✅ Calltouch: заявка успешно отправлена', calltouchResult);
+      } else {
+        console.error('[LeadService] ❌ Calltouch: ошибка', calltouchResponse.status, await calltouchResponse.text().catch(() => ''));
+      }
+    } catch (error) {
+      console.error('[LeadService] ❌ Calltouch: ошибка отправки', error);
+      // Если CORS блокирует, пробуем через прокси
+      console.warn('[LeadService] ⚠️ Calltouch заблокирован CORS, отправка через прокси не реализована');
+    }
+    
+    // Формируем данные для отправки в 1C
     const payload = {
       name: firstName,
       last_name: lastName,
@@ -92,7 +146,7 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
     
     console.log('[LeadService] Отправка заявки в 1C:', payload);
     
-    // Отправляем через прокси
+    // Отправляем в 1C через прокси
     const response = await fetch(PROXY_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -131,29 +185,7 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
         });
       }
       
-      // Логируем информацию о Calltouch
-      if (result.calltouch) {
-        console.log('[LeadService] 📞 Calltouch статус:', {
-          sent: result.calltouch.sent,
-          http_code: result.calltouch.http_code,
-          error: result.calltouch.error,
-          response: result.calltouch.response,
-          debug: result.calltouch.debug
-        });
-        
-        if (result.calltouch.sent) {
-          console.log('[LeadService] ✅ Calltouch: заявка успешно отправлена в Calltouch API');
-        } else {
-          console.error('[LeadService] ❌ Calltouch: ошибка отправки в Calltouch API', {
-            http_code: result.calltouch.http_code,
-            error: result.calltouch.error,
-            response: result.calltouch.response,
-            debug_url: result.calltouch.debug?.url
-          });
-        }
-      } else {
-        console.warn('[LeadService] ⚠️ Calltouch: информация отсутствует в ответе сервера');
-      }
+      // Calltouch уже отправлен напрямую с клиента выше
     } catch (e) {
       // Если ответ не JSON, но статус OK - считаем успехом
       console.log('[LeadService] Ответ не JSON, но статус OK. Текст ответа:', responseText);
@@ -182,16 +214,6 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
         });
       } catch (e) {
         console.warn('Failed to send Yandex Metrika event:', e);
-      }
-    }
-    
-    // Calltouch отправляется автоматически из lead-proxy.php на сервере
-    // Проверяем результат в ответе от сервера
-    if (result.calltouch) {
-      if (result.calltouch.sent) {
-        console.log('[LeadService] ✅ Calltouch: заявка успешно отправлена');
-      } else {
-        console.error('[LeadService] ❌ Calltouch: ошибка отправки', result.calltouch);
       }
     }
     
