@@ -130,9 +130,34 @@ jobs:
               echo '✅ sudo работает без пароля для пользователя деплоя'
               # sudo работает без пароля
               sudo mkdir -p /etc/nginx/includes
+              
+              # КРИТИЧНО: Удаляем старый файл api-proxy.conf если он содержит proxy_pass на 1C
+              if [ -f /etc/nginx/includes/api-proxy.conf ]; then
+                if sudo grep -q 'proxy_pass.*cloud\.1c\.fitness' /etc/nginx/includes/api-proxy.conf 2>/dev/null; then
+                  echo '⚠️  Обнаружен старый файл api-proxy.conf с proxy_pass на 1C! Удаляем...'
+                  sudo rm /etc/nginx/includes/api-proxy.conf
+                  echo '✅ Старый файл удален'
+                fi
+              fi
+              
+              # Создаем новый файл с правильной конфигурацией (fastcgi_pass, а не proxy_pass)
               sudo sed \"s|DOCUMENT_ROOT_PLACEHOLDER|\$DOCUMENT_ROOT|g; s|PHP_SOCKET_PLACEHOLDER|\$PHP_SOCKET|g\" /tmp/nginx-api-proxy.conf > /tmp/api-proxy-custom.conf
+              
+              # Проверяем что в новом файле НЕТ proxy_pass на 1C
+              if grep -q 'proxy_pass.*cloud\.1c\.fitness' /tmp/api-proxy-custom.conf 2>/dev/null; then
+                echo '❌ ОШИБКА: В новом файле найден proxy_pass на 1C! Это неправильно!'
+                exit 1
+              fi
+              
+              # Проверяем что в новом файле ЕСТЬ fastcgi_pass
+              if ! grep -q 'fastcgi_pass' /tmp/api-proxy-custom.conf 2>/dev/null; then
+                echo '❌ ОШИБКА: В новом файле НЕ найден fastcgi_pass!'
+                exit 1
+              fi
+              
+              # Копируем новый файл
               sudo cp /tmp/api-proxy-custom.conf /etc/nginx/includes/api-proxy.conf
-              echo '✅ Конфигурация api-proxy.conf создана'
+              echo '✅ Конфигурация api-proxy.conf создана и проверена (используется fastcgi_pass, не proxy_pass)'
               
               # Находим основной конфиг nginx
               NGINX_CONF=\$(ls /etc/nginx/sites-enabled/*.conf 2>/dev/null | head -1)
