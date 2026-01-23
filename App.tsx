@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import Home from './pages/Home';
@@ -40,7 +40,7 @@ const AppContent: React.FC = () => {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/oferta" element={<Oferta />} />
             <Route path="/rules" element={<Rules />} />
-            <Route path="/thank-you" element={<ThankYou />} />
+            <Route path="/submitted" element={<ThankYou />} />
           </Routes>
         </main>
         <Footer />
@@ -53,10 +53,10 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <FeedbackProvider>
-      <HashRouter>
+      <BrowserRouter>
         <ScrollToTop />
         <AppContent />
-      </HashRouter>
+      </BrowserRouter>
     </FeedbackProvider>
   );
 };

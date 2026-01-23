@@ -48,7 +48,7 @@ const LeadForm: React.FC<{ subject: string }> = ({ subject }) => {
 
     if (result.success) {
       // Редирект на страницу благодарности
-      navigate(`/thank-you?subject=${encodeURIComponent(subject)}`);
+      navigate(`/submitted?subject=${encodeURIComponent(subject)}`);
     } else {
       setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
     }

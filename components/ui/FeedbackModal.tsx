@@ -48,7 +48,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, s
     if (result.success) {
       onClose(); // Закрываем модалку
       // Редирект на страницу благодарности
-      navigate(`/thank-you?subject=${encodeURIComponent(subject)}`);
+      navigate(`/submitted?subject=${encodeURIComponent(subject)}`);
     } else {
       setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
     }

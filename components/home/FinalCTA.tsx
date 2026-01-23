@@ -43,7 +43,7 @@ export const FinalCTA: React.FC = () => {
 
     if (result.success) {
       // Редирект на страницу благодарности
-      navigate('/thank-you?subject=' + encodeURIComponent('Индивидуальная презентация клуба'));
+      navigate('/submitted?subject=' + encodeURIComponent('Индивидуальная презентация клуба'));
     } else {
       setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
     }

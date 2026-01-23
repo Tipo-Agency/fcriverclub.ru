@@ -44,7 +44,7 @@ const LeadFormKids: React.FC = () => {
 
     if (result.success) {
       // Редирект на страницу благодарности
-      navigate('/thank-you?subject=' + encodeURIComponent('River Kids: Запись на визит'));
+      navigate('/submitted?subject=' + encodeURIComponent('River Kids: Запись на визит'));
     } else {
       setError(result.message || 'Ошибка отправки заявки. Попробуйте позже.');
     }
