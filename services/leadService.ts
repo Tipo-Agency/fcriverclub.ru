@@ -87,14 +87,16 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
       try {
         const ctParams = (window as any).ct('calltracking_params', calltouchModId);
         calltouchSessionId = ctParams?.sessionId;
+        console.log('[LeadService] Calltouch sessionId:', calltouchSessionId);
       } catch (e) {
         console.warn('[LeadService] Не удалось получить sessionId из Calltouch:', e);
       }
     }
     
     // Формируем данные для Calltouch (согласно документации)
+    const fio = `${firstName} ${lastName}`.trim() || firstName || 'Клиент';
     const calltouchData = new URLSearchParams();
-    calltouchData.append('fio', `${firstName} ${lastName}`.trim() || firstName);
+    calltouchData.append('fio', fio);
     calltouchData.append('phoneNumber', normalizedPhone);
     calltouchData.append('email', data.email || '');
     calltouchData.append('subject', data.subject || 'Заявка с сайта fcriverclub.ru');
@@ -107,10 +109,22 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
       calltouchData.append('requestUrl', window.location.href);
     }
     
-    // Отправляем в Calltouch напрямую
+    console.log('[LeadService] Отправка в Calltouch:', {
+      fio,
+      phoneNumber: normalizedPhone,
+      email: data.email || '',
+      subject: data.subject || 'Заявка с сайта fcriverclub.ru',
+      sessionId: calltouchSessionId || 'не указан'
+    });
+    
+    // Отправляем в Calltouch напрямую (ОБЯЗАТЕЛЬНО с await!)
     let calltouchSuccess = false;
+    let calltouchError = null;
     try {
-      const calltouchResponse = await fetch(`https://api.calltouch.ru/calls-service/RestAPI/requests/${calltouchSiteId}/register/`, {
+      const calltouchUrl = `https://api.calltouch.ru/calls-service/RestAPI/requests/${calltouchSiteId}/register/`;
+      console.log('[LeadService] Calltouch URL:', calltouchUrl);
+      
+      const calltouchResponse = await fetch(calltouchUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
@@ -118,17 +132,33 @@ export const sendLeadTo1C = async (data: LeadData): Promise<{ success: boolean; 
         body: calltouchData.toString(),
       });
       
+      console.log('[LeadService] Calltouch response status:', calltouchResponse.status, calltouchResponse.statusText);
+      
       if (calltouchResponse.ok) {
         calltouchSuccess = true;
-        const calltouchResult = await calltouchResponse.json().catch(() => null);
+        const calltouchResult = await calltouchResponse.json().catch(() => {
+          const text = calltouchResponse.text();
+          console.warn('[LeadService] Calltouch ответ не JSON:', text);
+          return null;
+        });
         console.log('[LeadService] ✅ Calltouch: заявка успешно отправлена', calltouchResult);
       } else {
-        console.error('[LeadService] ❌ Calltouch: ошибка', calltouchResponse.status, await calltouchResponse.text().catch(() => ''));
+        const errorText = await calltouchResponse.text().catch(() => '');
+        calltouchError = `HTTP ${calltouchResponse.status}: ${errorText}`;
+        console.error('[LeadService] ❌ Calltouch: ошибка', calltouchResponse.status, errorText);
       }
-    } catch (error) {
+    } catch (error: any) {
+      calltouchError = error.message || String(error);
       console.error('[LeadService] ❌ Calltouch: ошибка отправки', error);
-      // Если CORS блокирует, пробуем через прокси
-      console.warn('[LeadService] ⚠️ Calltouch заблокирован CORS, отправка через прокси не реализована');
+      
+      // Проверяем если это CORS ошибка
+      if (error.message?.includes('CORS') || error.message?.includes('Failed to fetch')) {
+        console.error('[LeadService] ❌ Calltouch заблокирован CORS! Нужен серверный прокси.');
+      }
+    }
+    
+    if (!calltouchSuccess) {
+      console.error('[LeadService] ⚠️ Calltouch: заявка НЕ отправлена!', calltouchError);
     }
     
     // Формируем данные для отправки в 1C
