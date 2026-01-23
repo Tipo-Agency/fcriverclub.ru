@@ -141,8 +141,15 @@ jobs:
               fi
               echo '📄 Nginx config: '\$NGINX_CONF
               
-              # Удаляем старые location блоки для /api/lead-proxy
-              sudo sed -i '/location[[:space:]]*[=]*[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
+              # Удаляем ВСЕ старые location блоки для /api/lead-proxy (включая те что проксируют в 1C)
+              echo '🔍 Удаление всех старых location блоков для /api/lead-proxy...'
+              # Удаляем location = /api/lead-proxy
+              sudo sed -i '/location[[:space:]]*=[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
+              # Удаляем location /api/lead-proxy (без =)
+              sudo sed -i '/location[[:space:]]*\/api\/lead-proxy/,/^[[:space:]]*}/d' \"\$NGINX_CONF\" 2>/dev/null || true
+              # Удаляем строки с proxy_pass на 1C внутри location блоков
+              sudo sed -i '/proxy_pass.*cloud\.1c\.fitness.*lead.*Webhook/d' \"\$NGINX_CONF\" 2>/dev/null || true
+              echo '✅ Все старые location блоки удалены'
               
               # Добавляем include для api-proxy.conf ПЕРЕД location /
               if ! grep -q 'include.*api-proxy.conf' \"\$NGINX_CONF\" 2>/dev/null; then
@@ -167,8 +174,19 @@ jobs:
               sleep 1
               
               # Финальная проверка
-              if sudo nginx -T 2>&1 | grep -q 'location.*lead-proxy'; then
+              echo '🔍 Финальная проверка конфигурации nginx...'
+              NGINX_TEST=\$(sudo nginx -T 2>&1)
+              if echo \"\$NGINX_TEST\" | grep -q 'location.*lead-proxy'; then
                 echo '✅ Location блок для lead-proxy найден в конфигурации nginx'
+                echo 'Проверяем что используется fastcgi_pass (PHP), а не proxy_pass (1C):'
+                if echo \"\$NGINX_TEST\" | grep -A 10 'location.*lead-proxy' | grep -q 'fastcgi_pass'; then
+                  echo '✅ Используется fastcgi_pass (PHP) - правильно!'
+                elif echo \"\$NGINX_TEST\" | grep -A 10 'location.*lead-proxy' | grep -q 'proxy_pass.*1c'; then
+                  echo '❌ ОШИБКА: Найден proxy_pass на 1C! Это неправильно, нужно использовать PHP!'
+                  exit 1
+                else
+                  echo '⚠️  Warning: Не удалось определить тип проксирования'
+                fi
               else
                 echo '⚠️  Warning: Location блок для lead-proxy не найден'
               fi
