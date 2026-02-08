@@ -21,6 +21,7 @@ export const Header: React.FC = () => {
     { name: 'Клуб', path: '/' },
     { name: 'RIVER KIDS', path: '/kids' },
     { name: 'Направления', path: '/services' },
+    { name: 'Тренеры', path: '/trainers' },
     { name: 'Карты', path: '/pricing' },
     { name: 'Расписание', path: '/schedule' }
   ];

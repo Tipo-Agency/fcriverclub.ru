@@ -13,6 +13,18 @@ export interface Trainer {
   role: string;
   specialization: string;
   image: string;
+  /** Регалии, достижения */
+  credentials?: string;
+  /** Образование */
+  education?: string;
+}
+
+export type TrainerCategoryId = 'pool' | 'kids' | 'gym' | 'group';
+
+export interface TrainerCategory {
+  id: TrainerCategoryId;
+  title: string;
+  trainers: Trainer[];
 }
 
 export interface PricingPlan {

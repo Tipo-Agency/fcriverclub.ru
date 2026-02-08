@@ -12,6 +12,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import Oferta from './pages/Oferta';
 import Rules from './pages/Rules';
 import ThankYou from './pages/ThankYou';
+import Trainers from './pages/Trainers';
 import { FeedbackProvider, useFeedback } from './contexts/FeedbackContext';
 import { FeedbackModal } from './components/ui/FeedbackModal';
 
@@ -36,6 +37,7 @@ const AppContent: React.FC = () => {
             <Route path="/kids" element={<RiverKids />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/schedule" element={<Schedule />} />
+            <Route path="/trainers" element={<Trainers />} />
             <Route path="/services" element={<Directions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/oferta" element={<Oferta />} />
