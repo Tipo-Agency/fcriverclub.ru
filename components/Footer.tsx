@@ -112,17 +112,17 @@ export const Footer: React.FC = () => {
           <div className="flex flex-col justify-end lg:items-end gap-6">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.4em] text-white/10">River Club 2026 © Excellence in Motion</p>
             
-            {/* DESIGNED BY TIPA.UZ */}
+            {/* Разработка сайта — TIPA */}
             <a 
-              href="https://tipa.uz" 
+              href="https://tipa.uz/ru/services/web" 
               target="_blank" 
-              rel="noopener noreferrer" 
+              rel="noopener" 
               className="flex items-center gap-3 group/credit"
             >
-              <span className="text-[10px] font-black text-white/20 uppercase tracking-widest transition-colors group-hover/credit:text-white/40">DESIGNED BY</span>
+              <span className="text-[10px] font-black text-white/20 uppercase tracking-widest transition-colors group-hover/credit:text-white/40">Разработка сайта — TIPA</span>
               <img 
                 src="/tipa-logo.svg" 
-                alt="TIPA.UZ" 
+                alt="" 
                 className="h-6 md:h-8 opacity-60 group-hover/credit:opacity-100 transition-opacity"
               />
             </a>
